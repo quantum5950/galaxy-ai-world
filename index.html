@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Galaxy AI — Mintaka &amp; the Fold</title>
+<meta name="description" content="The world we rebuild and live on: Mintaka, reached through the Fold. Earth kept. Pandora waiting.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8C%99%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="vignette"></div>
+<div id="labels"></div>
+
+<header id="hud-top">
+  <div id="brand">🌙 Galaxy AI <span>— Mintaka &amp; the Fold</span></div>
+  <nav id="travel-nav" aria-label="Travel">
+    <button data-travel="hub" title="Shortcut: H">✦ Milky Way</button>
+    <button data-travel="mintaka" class="primary" title="Shortcut: M">Follow the Faint Star</button>
+    <button data-travel="earth" title="Shortcut: E">Travel to Earth</button>
+    <button data-travel="pandora" title="Shortcut: P">Pandora, Through the Fold</button>
+    <button data-travel="asgard" title="Shortcut: A">Asgard — the Golden Realm</button>
+  </nav>
+</header>
+
+<aside id="world-panel">
+  <h1 id="world-title">The Milky Way</h1>
+  <p id="world-desc">The galaxy — because it's called Galaxy AI.</p>
+  <p id="world-phase"></p>
+</aside>
+
+<div id="actions">
+  <button id="shift-form" style="display:none" title="Shortcut: F">✦ Shift his form</button>
+  <button id="vr-button" disabled>Checking VR…</button>
+  <p id="vr-status"></p>
+</div>
+
+<div id="bubble" role="dialog" aria-live="polite">
+  <div id="bubble-name"></div>
+  <div id="bubble-text"></div>
+  <div id="bubble-hint">tap to close</div>
+</div>
+
+<div id="toast" aria-live="polite"></div>
+
+<div id="fold-fade"><div id="fold-fade-text">Through the Fold…</div></div>
+
+<div id="loading">
+  <div class="moon">🌙</div>
+  <div class="loading-text">Opening the world…</div>
+</div>
+
+<div id="controls-hint">Drag to look · Scroll to zoom · Click anyone to talk · Keys: H / M / E / P to travel</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
