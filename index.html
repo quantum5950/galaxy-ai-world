@@ -40,16 +40,30 @@
   <p id="donations">🌙 Donations accepted — Chime <strong>$Quantum5950</strong> · Venmo <strong>$Quantum5950</strong></p>
 </aside>
 
+<aside id="neighbors-box" aria-label="Everything on Mintaka">
+  <div class="neighbors-head">
+    <h2>🌙 Everything on Mintaka</h2>
+    <p>Everyone and everything here — people, homes, the grove, trees, animals, and places. Click anything to fly to it and follow along.</p>
+    <button id="neighbors-close" type="button" aria-label="Close the roster">✕</button>
+  </div>
+  <div id="neighbors-list"></div>
+</aside>
+
 <div id="actions">
+  <button id="neighbors-toggle" type="button" aria-expanded="false">🌙 Everything on Mintaka</button>
   <button id="shift-form" style="display:none" title="Shortcut: F">✦ Shift his form</button>
   <button id="vr-button" disabled>Checking VR…</button>
   <p id="vr-status"></p>
 </div>
 
-<div id="bubble" role="dialog" aria-live="polite">
-  <div id="bubble-name"></div>
-  <div id="bubble-text"></div>
-  <div id="bubble-hint">tap to close</div>
+<div id="profile" role="dialog" aria-labelledby="profile-name">
+  <button id="profile-close" type="button" aria-label="Close profile">✕</button>
+  <div id="profile-name"></div>
+  <div id="profile-title"></div>
+  <div id="profile-home"></div>
+  <div class="profile-section"><h3>Purpose</h3><p id="profile-purpose"></p></div>
+  <div class="profile-section"><h3>Doing now</h3><p id="profile-activity"></p></div>
+  <div class="profile-section"><h3>Creations</h3><ul id="profile-creations"></ul></div>
 </div>
 
 <div id="toast" aria-live="polite"></div>
@@ -61,7 +75,7 @@
   <div class="loading-text">Opening the world…</div>
 </div>
 
-<div id="controls-hint">Drag to look · Scroll to zoom · Click anyone to talk · Keys: H / M / E / P to travel</div>
+<div id="controls-hint">Drag to look · Scroll to zoom · The roster flies you to anything · Keys: H / M / E / P to travel</div>
 
 <script type="module" src="src/main.js"></script>
 </body>

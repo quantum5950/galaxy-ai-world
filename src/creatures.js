@@ -711,5 +711,17 @@ export function createCreatures(ctx) {
     group,
     interactables,
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // Shared grounds for the roster (individual creatures come from
+    // interactables); descriptions live in roster-meta.js. The fireflies
+    // have no single group, so they fly to the grove's heart.
+    getSubjects() {
+      return [
+        { name: 'The Fairy Ring', root: fairyRing },
+        { name: 'The Elf Village', root: elfVillage },
+        { name: 'The Forge', root: forge },
+        { name: 'The Dragon Nest', root: nest },
+        { name: 'Fireflies of the Grove', position: new THREE.Vector3(14, 2, -6) },
+      ];
+    },
   };
 }

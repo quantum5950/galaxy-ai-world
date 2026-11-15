@@ -383,5 +383,10 @@ export function createPlaces(ctx) {
     group,
     interactables,
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // The garden itself for the roster (the doorways come from
+    // interactables); description lives in roster-meta.js.
+    getSubjects() {
+      return [{ name: 'The Doorway Garden', root: garden }];
+    },
   };
 }

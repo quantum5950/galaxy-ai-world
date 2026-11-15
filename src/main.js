@@ -1,5 +1,5 @@
 // main.js — Galaxy AI world: renderer, worlds, travel through the Fold,
-// cinematic camera flights, click-to-talk, HUD, and WebXR entry.
+// cinematic camera flights, click actions, HUD, and WebXR entry.
 //
 // Architecture: one THREE.Scene per world, swapped on travel. Each world
 // module exports { group, interactables, fog, camera, update }.
@@ -21,6 +21,7 @@ import { createPandora } from './pandora.js';
 import { createAsgard } from './asgard.js';
 import { setupXR } from './xr.js';
 import { PHASES, phaseAt } from './neighbors.js';
+import { createNeighborsUI } from './profiles.js';
 
 // ---------- Renderer ----------
 const canvasHost = document.getElementById('app');
@@ -65,9 +66,6 @@ const worldTitle = document.getElementById('world-title');
 const worldDesc = document.getElementById('world-desc');
 const phaseEl = document.getElementById('world-phase');
 const toastEl = document.getElementById('toast');
-const bubbleEl = document.getElementById('bubble');
-const bubbleName = document.getElementById('bubble-name');
-const bubbleText = document.getElementById('bubble-text');
 const fadeEl = document.getElementById('fold-fade');
 const fadeText = document.getElementById('fold-fade-text');
 const shiftBtn = document.getElementById('shift-form');
@@ -80,15 +78,6 @@ function toast(msg, ms = 5000) {
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
 }
-let bubbleTimer = null;
-function showBubble(name, text) {
-  bubbleName.textContent = name;
-  bubbleText.textContent = text;
-  bubbleEl.classList.add('show');
-  if (bubbleTimer) clearTimeout(bubbleTimer);
-  bubbleTimer = setTimeout(() => bubbleEl.classList.remove('show'), 7000);
-}
-bubbleEl.addEventListener('click', () => bubbleEl.classList.remove('show'));
 
 const WORLD_INFO = {
   hub: {
@@ -97,7 +86,7 @@ const WORLD_INFO = {
   },
   mintaka: {
     title: 'Mintaka — The Hidden Planet',
-    desc: 'Always night. The planet glows from within and needs no sun. Our home, the grove, and everyone we love. Click anyone to talk.',
+    desc: 'Always night. The planet glows from within and needs no sun. Our home, the grove, and everyone we love. Watch everything that lives and happens here — the roster will fly you to any of it.',
   },
   earth: {
     title: 'Earth — The Copy',
@@ -122,7 +111,8 @@ let traveling = false;
 function travel(destId) {
   if (traveling || destId === activeId || !worlds[destId]) return;
   traveling = true;
-  bubbleEl.classList.remove('show');
+  stopFollow();
+  neighborsUI.closeProfile();
   controls.enabled = false;
   fadeText.textContent = 'Through the Fold…';
   fadeEl.classList.add('show');
@@ -152,6 +142,8 @@ function enterWorld(id, { instant = false, fly = false } = {}) {
   }
   phaseEl.style.display = id === 'mintaka' ? '' : 'none';
   shiftBtn.style.display = id === 'mintaka' && world.arrash ? '' : 'none';
+  document.body.classList.toggle('on-mintaka', id === 'mintaka');
+  if (id === 'mintaka') neighborsUI.refresh();
   if (id === 'fold') {
     camera.position.copy(world.camera.position);
     controls.target.copy(world.camera.target);
@@ -187,6 +179,29 @@ function easeInOutCubic(x) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
 }
 
+// ---------- Follow mode ----------
+// After a roster flight to a person or animal, the camera follows them
+// as they move through their own schedules: each frame, the subject's
+// movement is added to both the camera position and the orbit target,
+// so the visitor's orbit offset and zoom are preserved and they can
+// still look around while following. Stops when another roster entry
+// is picked, when traveling, or on Escape. Observation only.
+let followingId = null;
+let pendingFollowId = null;
+let pendingFollowName = '';
+let followRoot = null;
+let followHasPrev = false;
+const followPrev = new THREE.Vector3();
+const followPos = new THREE.Vector3();
+const followDelta = new THREE.Vector3();
+function stopFollow() {
+  followingId = null;
+  pendingFollowId = null;
+  pendingFollowName = '';
+  followRoot = null;
+  followHasPrev = false;
+}
+
 function buildWorld(id, creator) {
   const ctx = {
     labels: labelScope(id),
@@ -210,6 +225,56 @@ buildWorld('earth', createEarth);
 buildWorld('pandora', createPandora);
 buildWorld('asgard', createAsgard);
 
+// ---------- Roster box + profiles (Mintaka) ----------
+// The roster is the way to reach anything on Mintaka: clicking an entry
+// flies the camera to it (reusing the cinematic flight below) and opens
+// its profile. Followable subjects (people, animals) keep the camera
+// with them once the flight lands — see Follow mode above.
+const neighborsBox = document.getElementById('neighbors-box');
+const neighborsToggle = document.getElementById('neighbors-toggle');
+const neighborsUI = createNeighborsUI({
+  listEl: document.getElementById('neighbors-list'),
+  profileEl: document.getElementById('profile'),
+  getSubjects: () => (worlds.mintaka && worlds.mintaka.getSubjects ? worlds.mintaka.getSubjects() : []),
+  onSelect: (id) => {
+    const subject = worlds.mintaka.getSubjects().find((p) => p.id === id);
+    if (subject) {
+      if (subject.follow && subject.root) {
+        pendingFollowId = id;
+        pendingFollowName = subject.name;
+        followRoot = subject.root;
+        followHasPrev = false;
+      } else {
+        stopFollow();
+      }
+      flyToPerson(subject.position);
+    }
+    neighborsUI.openProfile(id);
+  },
+});
+function flyToPerson(pos) {
+  // Approach from the current viewing direction so the flight keeps its
+  // bearings, ending close enough to see the subject clearly.
+  const dir = camera.position.clone().sub(pos);
+  dir.y = 0;
+  if (dir.lengthSq() < 0.01) dir.set(0, 0, 1);
+  dir.normalize();
+  const camPos = pos.clone().add(dir.multiplyScalar(9));
+  camPos.y = pos.y + 4;
+  const target = pos.clone();
+  target.y = pos.y + 1.2;
+  flyTo(camPos, target, 2.2);
+}
+neighborsToggle.addEventListener('click', () => {
+  const open = neighborsBox.classList.toggle('open');
+  neighborsToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+});
+document.getElementById('neighbors-close').addEventListener('click', () => {
+  neighborsBox.classList.remove('open');
+  neighborsToggle.setAttribute('aria-expanded', 'false');
+});
+document.getElementById('profile-close').addEventListener('click', () => neighborsUI.closeProfile());
+
 // ---------- Post-processing: bloom for the glow ----------
 const composer = new EffectComposer(renderer);
 let bloomPass = null;
@@ -224,12 +289,18 @@ setupComposer();
 
 // Debug handle (harmless in production): lets automated checks and future
 // tools inspect the world, move the camera, and trigger travel.
-window.__galaxyDebug = { travel, enterWorld, camera, controls, worlds, scenes };
+window.__galaxyDebug = { travel, enterWorld, camera, controls, worlds, scenes, openProfile: (id) => neighborsUI.openProfile(id), getPeople: () => worlds.mintaka.getPeople(), getSubjects: () => worlds.mintaka.getSubjects(), flyToPerson, following: () => followingId, stopFollow };
 
 // Keep the render pass pointed at the active scene.
 const renderPass = composer.passes[0];
 
-// ---------- Click-to-talk ----------
+// ---------- Click actions ----------
+// World law: nobody talks to the inhabitants — visitors observe only.
+// There is no dialogue bubble anywhere. Clicking still works for the
+// things that are not talking: traveling between worlds (the hub stars)
+// and Arrash's own form shift. Profiles open only from the roster.
+// The `lines` data still attached by makeClickable is dormant: nothing
+// reads it anymore, and it is kept so the world's writing is not lost.
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 let downPos = null;
@@ -265,16 +336,7 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   if (!root) return;
   const click = root.userData.clickable;
   if (!click) return;
-  let line;
-  if (typeof click.lines === 'function') {
-    line = click.lines();
-  } else if (click.lines && click.lines.length) {
-    line = click.lines[click.lineIndex % click.lines.length];
-    click.lineIndex = (click.lineIndex + 1) % click.lines.length;
-  } else {
-    line = '';
-  }
-  showBubble(click.name, line);
+  // No dialogue: only the non-talking click actions run (travel, form shift).
   if (click.onClick) click.onClick();
 });
 
@@ -297,6 +359,7 @@ document.addEventListener('keydown', (e) => {
   else if (key === 'p') travel('pandora');
   else if (key === 'a') travel('asgard');
   else if (key === 'f' && activeId === 'mintaka') shiftBtn.click();
+  else if (key === 'escape') { stopFollow(); neighborsUI.closeProfile(); }
 });
 
 // ---------- WebXR ----------
@@ -320,6 +383,7 @@ window.addEventListener('resize', () => {
 const clock = new THREE.Clock();
 let firstFrame = true;
 let lastPhase = -1;
+let lastRosterRefresh = -10;
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -334,6 +398,28 @@ renderer.setAnimationLoop(() => {
       controls.enabled = true;
     }
   }
+  // Follow mode, once the flight has landed: engage a pending follow
+  // (re-aiming at where the subject is now, since it kept moving during
+  // the flight), then drag the camera and target along with the subject.
+  if (!flight && pendingFollowId && followRoot && !renderer.xr.isPresenting) {
+    followingId = pendingFollowId;
+    pendingFollowId = null;
+    followRoot.getWorldPosition(followPrev);
+    followHasPrev = true;
+    controls.target.copy(followPrev);
+    toast('Following ' + pendingFollowName + ' — pick anyone else in the roster, or travel, to stop.', 6000);
+    pendingFollowName = '';
+  }
+  if (followingId && !flight && followRoot && !renderer.xr.isPresenting) {
+    followRoot.getWorldPosition(followPos);
+    if (followHasPrev) {
+      followDelta.subVectors(followPos, followPrev);
+      camera.position.add(followDelta);
+      controls.target.add(followDelta);
+    }
+    followPrev.copy(followPos);
+    followHasPrev = true;
+  }
   if (controls.enabled) controls.update();
 
   const world = worlds[activeId];
@@ -346,6 +432,12 @@ renderer.setAnimationLoop(() => {
       lastPhase = phase;
       phaseEl.textContent = 'World clock: ' + PHASES[phase] + ' — the neighbors are ' +
         (phase === 0 ? 'waking and starting the day.' : phase === 1 ? 'at their morning work.' : phase === 2 ? 'at their afternoon work.' : phase === 3 ? 'gathering at the well.' : 'out under the stars.');
+    }
+    // Keep the roster "doing now" lines live (scientists move on
+    // their own dwell timers, not the world clock, so refresh on a beat).
+    if (t - lastRosterRefresh > 3) {
+      lastRosterRefresh = t;
+      neighborsUI.refresh();
     }
   }
 
@@ -360,6 +452,6 @@ renderer.setAnimationLoop(() => {
   if (firstFrame) {
     firstFrame = false;
     loadingEl.classList.add('hidden');
-    toast('Welcome to the world. Drag to look around, scroll to zoom, click anyone to talk — and follow the faint star home.', 8000);
+    toast('Welcome to the world. Drag to look around, scroll to zoom, and follow the faint star home. The roster will fly you to anything on Mintaka — and follow it as it moves.', 8000);
   }
 });

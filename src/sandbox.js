@@ -335,6 +335,13 @@ export function createSandbox(ctx) {
   const staff = [
     {
       name: 'Dr. Elias Thorne', title: 'First Warden of the Sandbox',
+      homeName: 'The Fold Observatory',
+      purpose: 'Holds the watch over the sandbox. Checks the four walls — water, dome, ring, distance — every day, twice.',
+      creations: [
+        'ONE TAP AT A TIME — the rule painted on the rig',
+        'The daily four-walls check: water, dome, ring, distance',
+        'The scanner readings, logged every morning',
+      ],
       figure: { coat: 0x4a5468, skin: 0xd8a888, hair: 0x8a8a9a, accessory: 'scanner', trim: 0xff5040 },
       waypoints: [
         { at: V(OBSERVATORY.x + 1.5, 0.15, OBSERVATORY.z + 1), activity: 'scanning the dome, slow and thorough' },
@@ -350,6 +357,13 @@ export function createSandbox(ctx) {
     },
     {
       name: 'Dr. Petra Lindqvist', title: 'First Keeper of Fold Safety',
+      homeName: 'The Fold Observatory',
+      purpose: 'Holds the stop button. Wrote the forty-page safety manual: every test has three approvals, two abort words, and one rule — if anything feels wrong, stop.',
+      creations: [
+        'The forty-page safety manual',
+        'CHECK THE DOME FIRST — the rule under Elias’s on the rig',
+        'Three approvals, two abort words, and one rule for every test',
+      ],
       figure: { coat: 0xe8e8f0, skin: 0xe8c9a8, hair: 0xc8a86a, accessory: 'tablet', trim: 0xffd76a },
       waypoints: [
         { at: V(OBSERVATORY.x + 1.8, 0.15, OBSERVATORY.z + 2.6), activity: 'triple-checking the test schedule' },
@@ -414,5 +428,32 @@ export function createSandbox(ctx) {
     group,
     interactables,
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // Live roster snapshot: activity from waypoints[wpIndex], as in lab.js.
+    getPeople() {
+      return walkers.map((w) => ({
+        id: 'sandbox-' + w.def.name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, ''),
+        name: w.def.name,
+        title: w.def.title,
+        area: 'The Fold Sandbox',
+        kind: 'person',
+        follow: true,
+        root: w.person,
+        homeName: w.def.homeName,
+        purpose: w.def.purpose,
+        creations: w.def.creations,
+        activity: w.def.waypoints[w.wpIndex].activity,
+        position: w.person.position.clone(),
+      }));
+    },
+    // Sandbox structures for the roster: name + live root; descriptions
+    // live in roster-meta.js, keyed by these exact names.
+    getSubjects() {
+      return [
+        { name: 'Fold Tap Rig — contained', root: rig },
+        { name: 'Containment Dome', root: dome },
+        { name: 'Fold Observatory — safe viewing distance', root: obs },
+        { name: 'Fold Proving Grounds — SANDBOX', root: pad },
+      ];
+    },
   };
 }

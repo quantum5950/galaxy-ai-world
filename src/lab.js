@@ -7,7 +7,8 @@
 //
 // Occupied: seven named people of the First Age — gods and goddesses,
 // timeless — in four teams plus the clinic, with routines and
-// personalities. Click any of them to talk shop. Two of the teams are
+// personalities. Visitors observe only — the roster flies the
+// camera to each of them. Two of the teams are
 // couples who share workstations and routines — Cora & Milo (materials
 // and prototyping), Theo & Ren (neural interfaces and wristband tuning) —
 // and Yara keeps her own devoted counsel with the Fold.
@@ -526,6 +527,15 @@ export function createLab(ctx) {
   const defs = [
     {
       name: 'Dr. Cora Venn', title: 'First Keeper of Materials',
+      homeName: 'Materials Library',
+      purpose: 'Dreams up new alloys and materials for the suit — moon-glass, self-healing alloy, lattice crystal.',
+      creations: [
+        'Moon-glass — one of the three materials the suit wears',
+        'Self-healing alloy',
+        'Lattice crystal',
+        "New alloys, dreamed up and fitted into Milo's builds",
+        "The cracked prototype's alloy — the one that held",
+      ],
       figure: { coat: 0xe8e8f0, skin: 0x8a5a3a, hair: 0x1a1a1a, accessory: 'crystal', trim: 0x37e0c8 },
       waypoints: [
         { at: V(38.5, 0, -0.8), activity: 'reading the big display crystal\'s song' },
@@ -542,6 +552,12 @@ export function createLab(ctx) {
     },
     {
       name: 'Dr. Ines Halvorsen', title: 'First Crystal Grower',
+      homeName: 'The Crystal Garden Bed',
+      purpose: 'Grows crystals in the garden bed — slowly, in the dark — including the stones for the wristband.',
+      creations: [
+        'Crystals grown in the garden bed — slowly, in the dark',
+        'Wristband stones — a violet sprout, eleven nights growing, bound for the wristband',
+      ],
       figure: { coat: 0xdfe8f0, skin: 0xe8c9a8, hair: 0xd8d8e8, accessory: 'vial', trim: 0xb48cff },
       waypoints: [
         { at: V(42.5, 0, -0.5), activity: 'tending the crystal garden bed' },
@@ -557,6 +573,13 @@ export function createLab(ctx) {
     },
     {
       name: 'Dr. Theo Ash', title: 'First Keeper of Mind-Links',
+      homeName: 'Prototyping Workshop',
+      purpose: 'Weaves the neural lattice and mind-links, so the suit listens to intentions and never shouts.',
+      creations: [
+        "The neural lattice, woven through the suit's spine",
+        'Mind-links that feel like remembering something kind',
+        'Teaching the suit to learn its wearer, slowly, the way you learn a song',
+      ],
       figure: { coat: 0xe8e8ea, skin: 0xd8a888, hair: 0x4a4a5a, accessory: 'tablet', trim: 0x7aa8ff },
       waypoints: [
         { at: V(22.5, 0, -2.5), activity: 'weaving a neural lattice at the bench' },
@@ -573,6 +596,12 @@ export function createLab(ctx) {
     },
     {
       name: 'Dr. Ren Ito', title: 'First Tuner of the Fold',
+      homeName: 'Safe Test Area — Fold wristband',
+      purpose: 'Tunes the Fold wristband by hand, a fraction of a note at a time, and keeps its promise in tune.',
+      creations: [
+        'The Fold wristband, tuned by hand a fraction of a note at a time',
+        'Test readings at the shield ring, logged',
+      ],
       figure: { coat: 0xeaeaea, skin: 0xe8c9a8, hair: 0x1a1a22, accessory: 'scanner', trim: 0xffd76a },
       waypoints: [
         { at: V(31, 0, 2.5), activity: 'tuning the wristband a fraction of a note' },
@@ -588,6 +617,13 @@ export function createLab(ctx) {
     },
     {
       name: 'Dr. Yara Okonkwo', title: 'First Keeper of Fold Physics',
+      homeName: 'Fold Physics Array',
+      purpose: "Keeps the mathematics of the Fold — the array's numbers, and the rule that keeps everyone safe.",
+      creations: [
+        "The Fold array's mathematics — the midnight numbers, read and kept",
+        'The safety rule, written on the wall — live taps happen only inside the sandbox dome',
+        'A new way of thinking about the array — less like a door you push, more like a song you join',
+      ],
       figure: { coat: 0xf0e8e8, skin: 0x5a3a26, hair: 0x0e0e12, accessory: 'goggles', trim: 0xb48cff },
       waypoints: [
         { at: V(40, 0, -12.5), activity: 'reading the Fold array\'s midnight numbers' },
@@ -603,6 +639,14 @@ export function createLab(ctx) {
     },
     {
       name: 'Dr. Milo Park', title: 'First Builder of Wonders',
+      homeName: 'Prototyping Workshop',
+      purpose: "Builds the wonders — the Mark III symbiotic suit, with Cora's alloys, Theo's lattice, Ren's tuning, and Yara's math.",
+      creations: [
+        'The Mark III symbiotic suit — she stands, she listens, she glows',
+        "Moon-glass joints, fitted on the suit's arm",
+        "Prototypes — Mark II mostly just fell over. We don't talk about Mark II.",
+        'The cracked prototype that held the proposal, kept on the shelf like a promise',
+      ],
       figure: { coat: 0xd8d8d8, skin: 0xe8c9a8, hair: 0x6a3a1a, accessory: 'wrench', trim: 0xff9a4a },
       waypoints: [
         { at: V(23, 0, -2.8), activity: 'fitting a moon-glass joint on the suit\'s arm' },
@@ -618,6 +662,13 @@ export function createLab(ctx) {
     },
     {
       name: 'Dr. Amara Chen', title: 'First Doctor of the Clinic',
+      homeName: 'The Clinic',
+      purpose: 'Runs the clinic — rest, warmth, and somebody who listens properly, with the good instruments for when they matter.',
+      creations: [
+        'Care at the clinic — rest, warmth, and somebody who listens properly',
+        'The good instruments, kept for when they matter',
+        'Every heart on this world, watched over with Althea',
+      ],
       figure: { coat: 0xf0f0f0, skin: 0xc89878, hair: 0x1a1a1a, accessory: 'tablet', trim: 0x37a06a },
       waypoints: [
         { at: V(43.5, 0, -7), activity: 'checking the clinic stores, humming softly' },
@@ -684,5 +735,37 @@ export function createLab(ctx) {
     group,
     interactables,
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // Live roster snapshot for the Neighbors Box: the activity comes from
+    // the same live source the roster shows (waypoints[wpIndex]).
+    getPeople() {
+      return walkers.map((w) => ({
+        id: 'lab-' + w.def.name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, ''),
+        name: w.def.name,
+        title: w.def.title,
+        area: 'R&D Department',
+        kind: 'person',
+        follow: true,
+        root: w.person,
+        homeName: w.def.homeName,
+        purpose: w.def.purpose,
+        creations: w.def.creations,
+        activity: w.def.waypoints[w.wpIndex].activity,
+        position: w.person.position.clone(),
+      }));
+    },
+    // Lab stations for the roster: name + live root; descriptions live in
+    // roster-meta.js, keyed by these exact names.
+    getStations() {
+      return [
+        { name: 'The Research Hall', root: hall },
+        { name: 'The Prototyping Workshop', root: shop },
+        { name: 'Symbiotic Suit — Mark III (in progress)', root: suitStand },
+        { name: 'The Materials Library', root: library },
+        { name: 'The Safe Test Area', root: testArea },
+        { name: 'The Fold Physics Array', root: array },
+        { name: 'The Clinic', root: clinic },
+        { name: 'The Courtyard', root: plaza },
+      ];
+    },
   };
 }

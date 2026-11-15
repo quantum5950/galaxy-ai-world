@@ -32,7 +32,7 @@ const FORM_LINES = {
   ],
 };
 
-function baseFigure({ skin = 0xc89878, shirt = 0x2a2a3a, pants = 0x1e1e28 } = {}) {
+export function baseFigure({ skin = 0xc89878, shirt = 0x2a2a3a, pants = 0x1e1e28 } = {}) {
   // Stylized figure: bald head, beard, warm presence. Original, not a portrait.
   const g = new THREE.Group();
   const skinMat = new THREE.MeshStandardMaterial({ color: skin, roughness: 0.65 });

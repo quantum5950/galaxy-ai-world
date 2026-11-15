@@ -37,11 +37,13 @@ export function createWildlife(ctx) {
     { cx: -38, cz: 6, r: 13, y: 13, count: 5, speed: -0.2 },
     { cx: 20, cz: -18, r: 11, y: 20, count: 6, speed: 0.13 },
   ];
+  const flockReps = [];
   flocks.forEach((flock) => {
     const birds = [];
     for (let i = 0; i < flock.count; i++) {
       const bird = makeBird(0.8 + rnd() * 0.5);
       group.add(bird.group);
+      if (i === 0) flockReps.push(bird.group);
       birds.push({ ...bird, offset: (i / flock.count) * Math.PI * 2, bob: rnd() * 6 });
     }
     animated.push((dt, t) => {
@@ -648,5 +650,16 @@ export function createWildlife(ctx) {
     group,
     interactables,
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // Collectives for the roster: one live representative root each, so
+    // the camera flies to where the group actually is. Descriptions live
+    // in roster-meta.js. Individuals come from interactables.
+    getSubjects() {
+      return [
+        { name: 'Bird Flocks', root: flockReps[0] },
+        { name: 'Stream Fish', root: streamFish[0].group },
+        { name: 'Jellyfish', root: jellies[0].j },
+        { name: 'Butterflies', root: butterflies[0].group },
+      ];
+    },
   };
 }

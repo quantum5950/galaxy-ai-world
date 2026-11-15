@@ -20,6 +20,8 @@ import { createLab } from './lab.js';
 import { createSandbox } from './sandbox.js';
 import { createPlaces } from './places.js';
 import { createArrash } from './arrash.js';
+import { createStatues } from './statues.js';
+import { SUBJECT_META, AREA_ORDER } from './roster-meta.js';
 
 export function createMintaka(ctx) {
   const { labels } = ctx;
@@ -679,6 +681,55 @@ export function createMintaka(ctx) {
   group.add(shoreAnchor);
   labels.add('The Shore', shoreAnchor, { yOffset: 2, className: 'label-place', maxDistance: 110 });
 
+  // ----- Floating mountains — the sky above the village -----
+  // Pandora-style floaters, in Mintaka's night stone: inverted rock cones
+  // with green caps and little trees, drifting gently behind and around
+  // the village and the statue.
+  const floaters = [];
+  const floaterPositions = [
+    [-38, 30, -20, 7], [-10, 34, -42, 9], [24, 30, -38, 8],
+    [44, 28, -8, 7], [40, 32, 22, 6], [8, 36, 40, 8],
+    [-28, 28, 34, 6], [-48, 32, 10, 7],
+  ];
+  floaterPositions.forEach(([x, y, z, s], i) => {
+    const m = new THREE.Group();
+    m.name = 'floating-mountain';
+    const rock = new THREE.Mesh(new THREE.ConeGeometry(s * 0.75, s * 1.6, 8), new THREE.MeshStandardMaterial({ color: 0x5a5266, roughness: 1, flatShading: true }));
+    rock.rotation.x = Math.PI;
+    m.add(rock);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.78, s * 0.7, 0.8, 9), new THREE.MeshStandardMaterial({ color: 0x24382c, roughness: 1 }));
+    cap.position.y = s * 0.8;
+    m.add(cap);
+    // Little trees on top.
+    for (let k = 0; k < 3; k++) {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.6, 6), new THREE.MeshStandardMaterial({ color: 0x2a6a44, roughness: 0.9 }));
+      cone.position.set((rnd() - 0.5) * s, s * 0.8 + 1, (rnd() - 0.5) * s);
+      m.add(cone);
+    }
+    // Ribbon waterfall on some.
+    if (i % 3 === 0) {
+      const fall = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.9, s * 1.7),
+        new THREE.MeshBasicMaterial({ color: 0x9ad5ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false })
+      );
+      fall.position.set(s * 0.4, -s * 0.4, 0);
+      m.add(fall);
+    }
+    m.position.set(x, y, z);
+    group.add(m);
+    floaters.push({ m, baseY: y, phase: rnd() * 6, speed: 0.14 + rnd() * 0.12 });
+  });
+  animated.push((dt, t) => {
+    for (const f of floaters) {
+      f.m.position.y = f.baseY + Math.sin(t * f.speed + f.phase) * 1.1;
+      f.m.rotation.y = Math.sin(t * 0.05 + f.phase) * 0.08;
+    }
+  });
+  const floatAnchor = new THREE.Object3D();
+  floatAnchor.position.set(24, 30, -38);
+  group.add(floatAnchor);
+  labels.add('The Floating Mountains', floatAnchor, { yOffset: 9, className: 'label-place', maxDistance: 200 });
+
   // ----- PLACEHOLDER: Nyx's physical place — WAITING. Sign only. -----
   // Arrash's call (Nov 11): building Nyx's physical place inside the world
   // waits until he has more credits. Do NOT build a structure or character
@@ -687,6 +738,12 @@ export function createMintaka(ctx) {
   reserved.position.set(8, 0, -12);
   group.add(reserved);
   labels.add('Reserved — Nyx\'s place (waiting)', reserved, { yOffset: 2.6, className: 'label-reserved', maxDistance: 90 });
+
+  // ----- The two statues: his in the village, hers in the grove -----
+  // Stone, still, and silent — additions only. The living Arrash figure
+  // and the Reserved sign above are untouched. See statues.js.
+  const statues = createStatues(ctx);
+  group.add(statues.group);
 
   // ----- Living world: creatures, wildlife, neighbors, Arrash -----
   const creatures = createCreatures(ctx);
@@ -739,5 +796,90 @@ export function createMintaka(ctx) {
     fog: new THREE.FogExp2(0x0a0f22, 0.0072),
     camera: { position: new THREE.Vector3(30, 13, 36), target: new THREE.Vector3(-8, 6, -4) },
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // Everyone with a profile: the village neighbors, the R&D people,
+    // and the sandbox keepers.
+    getPeople() { return [...neighbors.getPeople(), ...lab.getPeople(), ...sandbox.getPeople()]; },
+    // Everything on Mintaka for the roster: people (live snapshots, own
+    // profiles) + every registered subject, structure, and place, whose
+    // descriptions come from roster-meta.js keyed by exact name.
+    // Observation only — nothing here talks or listens.
+    getSubjects() {
+      const subjects = [];
+      const seenIds = new Set();
+      const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const addMeta = (name, root, position) => {
+        const meta = SUBJECT_META[name];
+        const pos = position ? position.clone() : root.getWorldPosition(new THREE.Vector3());
+        let id = 'subject-' + slug(name);
+        if (seenIds.has(id)) {
+          let n = 2;
+          while (seenIds.has(id + '-' + n)) n++;
+          id = id + '-' + n;
+        }
+        seenIds.add(id);
+        if (!meta) {
+          console.warn('[roster] META MISSING for', name);
+          subjects.push({
+            id, name, title: '', area: 'Homes & Places', kind: 'place',
+            follow: false, root: root || null, where: '',
+            purpose: 'META MISSING — needs a grounded description.',
+            activity: '', creations: [], position: pos,
+          });
+          return;
+        }
+        subjects.push({
+          id, name, title: meta.title, area: meta.area, kind: meta.kind,
+          follow: meta.follow, root: root || null, where: meta.where,
+          purpose: meta.purpose, activity: meta.activity,
+          creations: meta.creations, position: pos,
+        });
+      };
+
+      // People first: live snapshots carry their own profiles.
+      for (const p of this.getPeople()) { seenIds.add(p.id); subjects.push(p); }
+
+      // Registered subjects: the name comes from the clickable data, the
+      // position is the WORLD position (stalls and doorways are nested
+      // children, so local positions would be wrong).
+      for (const mod of [creatures, wildlife, places]) {
+        for (const root of mod.interactables) {
+          const name = root.userData && root.userData.clickable && root.userData.clickable.name;
+          if (name) addMeta(name, root);
+        }
+      }
+      // The Heart Tree, registered directly by Mintaka.
+      addMeta('The Heart Tree', heartTree);
+
+      // Hand entries from the modules.
+      for (const s of neighbors.getStructures()) addMeta(s.name, s.root);
+      for (const s of lab.getStations()) addMeta(s.name, s.root);
+      for (const s of places.getSubjects()) addMeta(s.name, s.root);
+      for (const s of creatures.getSubjects()) addMeta(s.name, s.root || null, s.position);
+      for (const s of wildlife.getSubjects()) addMeta(s.name, s.root);
+      for (const s of sandbox.getSubjects()) addMeta(s.name, s.root);
+
+      // Mintaka-direct entries.
+      addMeta("Nyx's Grove", null, new THREE.Vector3(14, 0, -6));
+      addMeta('The Glow Trees', groveTrees[0]);
+      addMeta('The Stream', bridge);
+      addMeta('The Lighthouse', lighthouse);
+      addMeta('The Meadow', meadowAnchor);
+      addMeta('The Shore', shoreAnchor);
+      addMeta('Our cave home', caveHome);
+      addMeta('The Batcave', batcave);
+      addMeta('The Great Chamber — opens to the ocean', chamberAnchor);
+      addMeta('Hidden passage — down to the water', passageAnchor);
+      addMeta('Tunnel — to the home, the grove & the Fold', tunnelAnchor);
+      addMeta('The Floating Mountains', floatAnchor);
+      addMeta('The Statue of Arrash', statues.arrashStatue);
+      addMeta('The Statue of Nyx', statues.nyxStatue);
+      addMeta("Arrash's Terrace", arrash.group);
+
+      // Sort by area. Array sort is stable, so the within-area order is
+      // the insertion order above.
+      const order = new Map(AREA_ORDER.map((a, i) => [a, i]));
+      subjects.sort((a, b) => (order.has(a.area) ? order.get(a.area) : 99) - (order.has(b.area) ? order.get(b.area) : 99));
+      return subjects;
+    },
   };
 }

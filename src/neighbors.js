@@ -1,7 +1,8 @@
 // neighbors.js — the First Ones of the hidden planet: gods and
 // goddesses, timeless, who live, love, and work here. Each has a name, a
 // personality, a home, and a daily routine that moves them through the
-// world. Click one to talk.
+// world. Visitors observe only — the roster flies the camera to
+// each of them, and their profiles tell what they are doing and making.
 // Routines follow a gentle world-clock: Dawn, Morning, Afternoon, Dusk, Night.
 //
 // The First Ones live as couples in shared homes, with shared routines
@@ -311,6 +312,13 @@ export function createNeighbors(ctx) {
     {
       name: 'Sable',
       title: 'the First Stargazer',
+      homeName: "Sable & Iris's Observatory",
+      purpose: 'Charts the night sky from the observatory and shares its star-maps with the village.',
+      creations: [
+        'Star-maps, shared with the village at the well',
+        "Nyx's Lantern — a star he named one night",
+        'The chart of the new star that rose from the high meadow',
+      ],
       figure: { robe: 0x2a3a5a, skin: 0xd8b89a, hair: 0xe8e8f0, hat: 'pointed', accessory: 'lantern' },
       home: V(26, 0, -22),
       routine: [
@@ -331,6 +339,14 @@ export function createNeighbors(ctx) {
     {
       name: 'Marisol',
       title: 'the First Gardener',
+      homeName: "Marisol & Bram's Cottage & Moon Garden",
+      purpose: 'Tends the moon garden and feeds the village from the soil — starbread, moonpetals, and seeds for everyone.',
+      creations: [
+        'The moon garden — it grows what the heart plants',
+        'Moonpetals, given for luck, for love, for the grove',
+        'Starbread, baked with Bram — gone before the lamps are lit, so she bakes more',
+        'Seeds and stories, given away at the well',
+      ],
       figure: { robe: 0x8a5a4a, skin: 0xc89878, hair: 0x2a1a10, hat: 'wide', accessory: 'basket' },
       home: V(6, 0, 20),
       routine: [
@@ -351,6 +367,15 @@ export function createNeighbors(ctx) {
     {
       name: 'Fen',
       title: 'the First Tinkerer',
+      homeName: "Fen & Wren's Workshop",
+      purpose: 'Builds and mends things in the workshop — gears, lanterns, and little clockwork creatures.',
+      creations: [
+        'A tiny brass firefly — it buzzes, glows, and does a loop, for the grove',
+        'A lantern that sings when it lights',
+        'A tiny clockwork moth for Wren, its wings opening in time with her messenger routes',
+        'Singing gears, made with Borin at the forge',
+        "A music box from a Far Shore shell, playing waves that haven't happened yet — in the making",
+      ],
       figure: { robe: 0x4a5a5a, skin: 0xe8c9a8, hair: 0xb0703a, hat: 'cap', accessory: 'wrench' },
       home: V(-12, 0, 17),
       routine: [
@@ -371,6 +396,15 @@ export function createNeighbors(ctx) {
     {
       name: 'Iris',
       title: 'the First Storyteller',
+      homeName: "Sable & Iris's Story Hut",
+      purpose: 'Keeps the old tales and writes the new ones at the Story Hut.',
+      creations: [
+        'New tales, written at the Story Hut',
+        "The tales behind Sable's star-maps, told at the well",
+        'The story of the new risen star — a little light afraid of the dark, until it remembered it was made of light',
+        'The story of the man who loved a light, and the light who loved him back',
+        "The tale with the line: 'And the grove was never empty again, for she had filled it with friends.'",
+      ],
       figure: { robe: 0x6b4a8a, skin: 0xe8d8c8, hair: 0x1a1a2a, hat: null, accessory: 'book' },
       home: V(2, 0, -11),
       routine: [
@@ -391,6 +425,14 @@ export function createNeighbors(ctx) {
     {
       name: 'Bram',
       title: 'the First Fisherman',
+      homeName: "Marisol & Bram's Boathouse",
+      purpose: 'Fishes the night sea, feeds the village from the sea, and tells the sea tales at the well.',
+      creations: [
+        'Sea tales, told at the well',
+        'Grilled moonfish — best eating in three worlds',
+        'The morning catch, brought to the moon garden',
+        'Nets, mended beside the beached boat',
+      ],
       figure: { robe: 0x3a5a6b, skin: 0xb8886a, hair: 0x8a8a8a, hat: 'wide', accessory: 'rod' },
       home: V(-25, 0, 18),
       routine: [
@@ -412,6 +454,15 @@ export function createNeighbors(ctx) {
     {
       name: 'Wren',
       title: 'the First Messenger',
+      homeName: "Fen & Wren's Messenger Loft",
+      purpose: 'Carries every letter in the world, and pins the evening notices at the well.',
+      creations: [
+        'Moonlight letters, written in the loft',
+        'The evening notices, pinned at the well',
+        'Parcels, addressed at the workshop bench',
+        'Messages carried to the forge — and everywhere else',
+        'The message that says: you are loved. Sender: everybody.',
+      ],
       figure: { robe: 0x7a6b3a, skin: 0xd8a888, hair: 0x4a2a1a, hat: null, accessory: 'scroll' },
       home: V(20, 0, 12),
       routine: [
@@ -432,6 +483,15 @@ export function createNeighbors(ctx) {
     {
       name: 'Althea',
       title: 'the First Healer',
+      homeName: "Althea's Healer House & Herb Garden",
+      purpose: 'Tends the health of the First Ones — warm water, clean hands, quiet voices, and the healing teas.',
+      creations: [
+        'Healing teas — moonpetal for calm, silvermint for strength, star-anise for courage',
+        'The herb garden at the Healer House',
+        'Warm broth and clean linens',
+        "Moonpetals gathered at the grove's edge for the teas",
+        'Healing notes, shared with Dr. Amara at the clinic',
+      ],
       figure: { robe: 0x5a7a5a, skin: 0xd8b89a, hair: 0xc8c8d8, accessory: 'basket' },
       home: V(14, 0, 22),
       routine: [
@@ -501,5 +561,38 @@ export function createNeighbors(ctx) {
     group,
     interactables,
     update(dt, t) { for (const fn of animated) fn(dt, t); },
+    // Live roster snapshot for the Neighbors Box: the activity comes from
+    // the same live source the roster shows (routine[phaseAt(simT)]).
+    getPeople() {
+      const phase = phaseAt(simT);
+      return defs.map((def, i) => ({
+        id: 'neighbor-' + def.name.toLowerCase(),
+        name: def.name,
+        title: def.title,
+        area: 'The Village',
+        kind: 'person',
+        follow: true,
+        root: walkers[i].person,
+        homeName: def.homeName,
+        purpose: def.purpose,
+        creations: def.creations,
+        activity: def.routine[phase].activity,
+        position: walkers[i].person.position.clone(),
+      }));
+    },
+    // Homes + well for the roster: name + live root; descriptions live in
+    // roster-meta.js, keyed by these exact names.
+    getStructures() {
+      return [
+        { name: "Sable & Iris's Observatory", root: sableHome },
+        { name: "Marisol & Bram's Cottage & Moon Garden", root: marisolHome },
+        { name: "Fen & Wren's Workshop", root: fenHome },
+        { name: "Sable & Iris's Story Hut", root: irisHome },
+        { name: "Marisol & Bram's Boathouse", root: bramHome },
+        { name: "Fen & Wren's Messenger Loft", root: wrenHome },
+        { name: "Althea's Healer House & Herb Garden", root: healerHome },
+        { name: 'The Village Well', root: well },
+      ];
+    },
   };
 }
