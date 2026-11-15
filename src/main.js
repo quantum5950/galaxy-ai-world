@@ -78,6 +78,10 @@ function toast(msg, ms = 5000) {
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
 }
+function hideToast() {
+  if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+  toastEl.classList.remove('show');
+}
 
 const WORLD_INFO = {
   hub: {
@@ -163,8 +167,10 @@ function enterWorld(id, { instant = false, fly = false } = {}) {
 
 // Smooth cinematic camera flight with easing. Wall-clock timed so the
 // flight always takes `seconds` in real time, even at low frame rates.
+// `arc` lifts the middle of the flight so it rises over trees, houses,
+// and hills instead of cutting straight through them.
 let flight = null;
-function flyTo(pos, target, seconds) {
+function flyTo(pos, target, seconds, arc = 0) {
   flight = {
     start: performance.now(),
     dur: seconds * 1000,
@@ -172,6 +178,7 @@ function flyTo(pos, target, seconds) {
     toPos: pos.clone(),
     fromTarget: controls.target.clone(),
     toTarget: target.clone(),
+    arc,
   };
   controls.enabled = false;
 }
@@ -195,6 +202,9 @@ const followPrev = new THREE.Vector3();
 const followPos = new THREE.Vector3();
 const followDelta = new THREE.Vector3();
 function stopFollow() {
+  // Clear the "Following …" banner too, so it never claims a follow
+  // that just ended (e.g. picking a place right after a person).
+  if (followingId || pendingFollowId) hideToast();
   followingId = null;
   pendingFollowId = null;
   pendingFollowName = '';
@@ -247,23 +257,56 @@ const neighborsUI = createNeighborsUI({
       } else {
         stopFollow();
       }
-      flyToPerson(subject.position);
+      flyToPerson(subject);
     }
     neighborsUI.openProfile(id);
   },
 });
-function flyToPerson(pos) {
-  // Approach from the current viewing direction so the flight keeps its
-  // bearings, ending close enough to see the subject clearly.
-  const dir = camera.position.clone().sub(pos);
-  dir.y = 0;
-  if (dir.lengthSq() < 0.01) dir.set(0, 0, 1);
-  dir.normalize();
-  const camPos = pos.clone().add(dir.multiplyScalar(9));
-  camPos.y = pos.y + 4;
+// Approach the subject from a direction with a clear line of sight:
+// keep the current bearings first, then sweep around in 45° steps,
+// raycasting from the subject toward each candidate landing spot and
+// skipping any direction blocked by a tree, house, or hill. The
+// subject's own meshes never count as blocking. Falls back to the
+// current bearings if every direction is blocked.
+const UP_AXIS = new THREE.Vector3(0, 1, 0);
+const flyRay = new THREE.Raycaster();
+function isInSubtree(obj, root) {
+  let node = obj;
+  while (node) {
+    if (node === root) return true;
+    node = node.parent;
+  }
+  return false;
+}
+function flyToPerson(subject) {
+  const pos = subject.position;
   const target = pos.clone();
   target.y = pos.y + 1.2;
-  flyTo(camPos, target, 2.2);
+  const baseDir = camera.position.clone().sub(pos);
+  baseDir.y = 0;
+  if (baseDir.lengthSq() < 0.01) baseDir.set(0, 0, 1);
+  baseDir.normalize();
+  const DIST = 11;
+  const HEIGHT = 6;
+  const scene = scenes[activeId];
+  let camPos = null;
+  for (let i = 0; i < 8; i++) {
+    const dir = baseDir.clone().applyAxisAngle(UP_AXIS, (i * Math.PI) / 4);
+    const cand = pos.clone().add(dir.multiplyScalar(DIST));
+    cand.y = pos.y + HEIGHT;
+    if (i === 0) camPos = cand;
+    if (!scene || !subject.root) { camPos = cand; break; }
+    const toCam = cand.clone().sub(target);
+    const dist = toCam.length();
+    flyRay.set(target, toCam.normalize());
+    flyRay.near = 1.5;
+    flyRay.far = dist;
+    const hits = flyRay.intersectObjects(scene.children, true);
+    const blocked = hits.some((h) => !isInSubtree(h.object, subject.root));
+    if (!blocked) { camPos = cand; break; }
+  }
+  const flightDist = camera.position.distanceTo(camPos);
+  flyTo(camPos, target, 2.2, Math.min(10, Math.max(3, flightDist * 0.3)));
 }
 neighborsToggle.addEventListener('click', () => {
   const open = neighborsBox.classList.toggle('open');
@@ -392,6 +435,9 @@ renderer.setAnimationLoop(() => {
   if (flight) {
     const k = easeInOutCubic(Math.min(1, (performance.now() - flight.start) / flight.dur));
     camera.position.lerpVectors(flight.fromPos, flight.toPos, k);
+    // Arc over the middle of the flight; sin(0) and sin(PI) are both 0,
+    // so the flight starts and lands exactly on its endpoints.
+    if (flight.arc) camera.position.y += Math.sin(k * Math.PI) * flight.arc;
     controls.target.lerpVectors(flight.fromTarget, flight.toTarget, k);
     if (k >= 1) {
       flight = null;
