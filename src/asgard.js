@@ -1337,6 +1337,685 @@ export function createAsgard(ctx) {
     '"Water is the first welcome," the hall-keeper says, drawing the bucket up. "Before bread, before songs, before stories — water. Drink. You are home now."',
   ], 3.0, 80);
 
+  // ======== THE GOLDEN MOUNTAIN + THE CAVE FEAST HALL ========
+  // Arrash told the gods about all the worlds — Mintaka, Earth,
+  // Pandora, the Fold, and the rest — and asked if they needed
+  // anything else created. They said yes: a feast hall in a mountain
+  // cave, warm and beautiful, with the table laid like the hall's.
+  // The mountain stands at the far northwest edge of the realm, its
+  // cave mouth facing the plaza so the firelight spills out and the
+  // table shows from outside. The mountain is rock forms around an
+  // open-fronted hollow — never sealed behind solid geometry.
+  const mtnRotY = Math.atan2(32, 30);
+  const mountain = new THREE.Group();
+  mountain.position.set(-32, 0, -30);
+  mountain.rotation.y = mtnRotY;
+  group.add(mountain);
+  const mtnRockMat = new THREE.MeshStandardMaterial({ color: 0x7a6a52, roughness: 1 });
+  const mtnRockMat2 = new THREE.MeshStandardMaterial({ color: 0x8a7a5e, roughness: 1 });
+  // Three great rock masses leave an open-fronted hollow between them.
+  const mtnBack = new THREE.Mesh(new THREE.SphereGeometry(7, 14, 10), mtnRockMat);
+  mtnBack.position.set(0, 3, -8.5);
+  mtnBack.scale.set(1.15, 1, 1);
+  mountain.add(mtnBack);
+  const mtnLeft = new THREE.Mesh(new THREE.SphereGeometry(6, 12, 10), mtnRockMat2);
+  mtnLeft.position.set(-8, 3, -1);
+  mountain.add(mtnLeft);
+  const mtnRight = new THREE.Mesh(new THREE.SphereGeometry(6, 12, 10), mtnRockMat);
+  mtnRight.position.set(8, 3, -1);
+  mountain.add(mtnRight);
+  // Roof slabs with a central slot: the star skylight (Váli's ask).
+  const mtnSlabGeo = new THREE.BoxGeometry(7.3, 0.5, 8);
+  const mtnSlabL = new THREE.Mesh(mtnSlabGeo, mtnRockMat);
+  mtnSlabL.position.set(-4.35, 5.2, 0);
+  mountain.add(mtnSlabL);
+  const mtnSlabR = new THREE.Mesh(mtnSlabGeo, mtnRockMat);
+  mtnSlabR.position.set(4.35, 5.2, 0);
+  mountain.add(mtnSlabR);
+  // The peak, with a golden cap catching the sun.
+  const mtnPeak = new THREE.Mesh(new THREE.ConeGeometry(5, 8, 8), mtnRockMat2);
+  mtnPeak.position.set(0, 9.45, -1);
+  mountain.add(mtnPeak);
+  const mtnCap = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.5, 8), goldMat);
+  mtnCap.position.set(0, 13.6, -1);
+  mountain.add(mtnCap);
+  register(mountain, 'The Golden Mountain', [
+    'The golden mountain rises at the edge of the realm, its peak capped in gold, its cave mouth open and warm. Inside: a feast hall, a waterfall, moonlight through many doors — and above, the gods\' own rooms, open to the stars.',
+    'The mountain is the family\'s second home: the hall for feasting, the cave for quieter nights, the rooms above for sleeping under the starlight. It was made because the gods asked, and Arrash said yes to all of it.',
+  ], 15, 170);
+
+  // ----- The Cave Feast Hall -----
+  const caveHall = new THREE.Group();
+  mountain.add(caveHall);
+  const caveFloor = new THREE.Mesh(new THREE.CircleGeometry(4.2, 24), homeStoneMat);
+  caveFloor.rotation.x = -Math.PI / 2;
+  caveFloor.position.set(0, 0.08, 1.0);
+  caveHall.add(caveFloor);
+  const caveApron = new THREE.Mesh(new THREE.CircleGeometry(4.0, 24), new THREE.MeshStandardMaterial({ color: 0x9a8a70, roughness: 1 }));
+  caveApron.rotation.x = -Math.PI / 2;
+  caveApron.position.set(0, 0.04, 5.0);
+  caveHall.add(caveApron);
+  // Standing stones framing the cave mouth.
+  [-3.2, 3.2].forEach((mx) => {
+    const mouthStone = new THREE.Mesh(new THREE.BoxGeometry(0.8, 3.2, 0.7), homeStoneMat);
+    mouthStone.position.set(mx, 1.6, 3.8);
+    caveHall.add(mouthStone);
+  });
+  // Firelight: a fire pit at the back of the chamber.
+  const caveFire = new THREE.Group();
+  caveFire.position.set(0, 0.08, -0.8);
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2;
+    const caveFireStone = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 6), new THREE.MeshStandardMaterial({ color: 0x6a6a78, roughness: 1 }));
+    caveFireStone.position.set(Math.cos(a) * 0.75, 0.15, Math.sin(a) * 0.75);
+    caveFireStone.scale.y = 0.75;
+    caveFire.add(caveFireStone);
+  }
+  const caveFlame = new THREE.Mesh(
+    new THREE.ConeGeometry(0.4, 1.2, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff9a3a, emissive: 0xff7a1a, emissiveIntensity: 1.6 })
+  );
+  caveFlame.position.y = 0.7;
+  caveFire.add(caveFlame);
+  const caveFireGlow = makeGlowSprite('rgba(255,170,80,0.85)', 3.6, 0.65);
+  caveFireGlow.position.y = 1.0;
+  caveFire.add(caveFireGlow);
+  const caveFireLight = new THREE.PointLight(0xffa050, 30, 16, 1.8);
+  caveFireLight.position.y = 1.2;
+  caveFire.add(caveFireLight);
+  caveHall.add(caveFire);
+  animated.push((dt, t) => {
+    const flicker = 1 + Math.sin(t * 7.1) * 0.09 + Math.sin(t * 12.9) * 0.05;
+    caveFlame.scale.set(flicker, 1 + Math.sin(t * 8.3) * 0.13, flicker);
+    caveFireGlow.material.opacity = 0.55 + Math.sin(t * 7.1) * 0.12;
+    caveFireLight.intensity = 27 + Math.sin(t * 7.1) * 6;
+  });
+  // The feast table, laid like the hall's, where the mouth light falls.
+  const caveFeast = new THREE.Group();
+  caveFeast.position.set(0, 0.08, 2.2);
+  const caveTableTop = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.14, 1.0), homeWoodMat);
+  caveTableTop.position.y = 0.95;
+  caveFeast.add(caveTableTop);
+  [-1.3, 1.3].forEach((x) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.95, 0.85), homeWoodMat);
+    leg.position.set(x, 0.48, 0);
+    caveFeast.add(leg);
+  });
+  [-0.95, 0.95].forEach((z) => {
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.12, 0.4), homeWoodMat);
+    bench.position.set(0, 0.55, z);
+    caveFeast.add(bench);
+  });
+  for (let i = 0; i < 2; i++) {
+    const loaf = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), loafMat);
+    loaf.scale.set(1.4, 0.6, 0.8);
+    loaf.position.set(-0.9 + i * 1.8, 1.08, -0.2 + i * 0.35);
+    caveFeast.add(loaf);
+  }
+  for (let i = 0; i < 5; i++) {
+    const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.11, 7, 6), fruitMats[i % 3]);
+    fruit.position.set(-1.2 + i * 0.6, 1.1, 0.28 - (i % 2) * 0.5);
+    caveFeast.add(fruit);
+  }
+  for (let i = 0; i < 2; i++) {
+    const flagon = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.32, 7), flagonMat);
+    flagon.position.set(-0.6 + i * 1.2, 1.18, 0.1);
+    caveFeast.add(flagon);
+  }
+  caveHall.add(caveFeast);
+  // Crystals in the cave walls, catching the light.
+  const caveCrystalMats = [];
+  const caveCrystalDefs = [
+    { x: -2.1, y: 0.35, z: -0.6, r: 0.3, color: 0xb48cff },
+    { x: -1.85, y: 0.25, z: -0.1, r: 0.18, color: 0xb48cff },
+    { x: 2.1, y: 0.35, z: 0.6, r: 0.3, color: 0x6ab8ff },
+    { x: 1.85, y: 0.25, z: 1.1, r: 0.18, color: 0x6ab8ff },
+    { x: -1.9, y: 0.3, z: 1.8, r: 0.26, color: 0xffd76a },
+    { x: -2.25, y: 2.4, z: 0.4, r: 0.2, color: 0xff7a9a },
+    { x: 2.25, y: 2.8, z: -0.4, r: 0.2, color: 0x4ad8c8 },
+  ];
+  for (const cd of caveCrystalDefs) {
+    const cmat = new THREE.MeshStandardMaterial({ color: cd.color, emissive: cd.color, emissiveIntensity: 0.8, roughness: 0.3 });
+    const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(cd.r, 0), cmat);
+    crystal.position.set(cd.x, cd.y, cd.z);
+    crystal.scale.y = 1.6;
+    caveHall.add(crystal);
+    caveCrystalMats.push({ mat: cmat, phase: rnd() * 6 });
+  }
+  // Rock nubs behind the two wall-mounted crystals.
+  [[-2.35, 2.4, 0.4], [2.35, 2.8, -0.4]].forEach(([nx, ny, nz]) => {
+    const nub = new THREE.Mesh(new THREE.DodecahedronGeometry(0.3, 0), mtnRockMat);
+    nub.position.set(nx, ny, nz);
+    caveHall.add(nub);
+  });
+  animated.push((dt, t) => {
+    for (const cm of caveCrystalMats) {
+      cm.mat.emissiveIntensity = 0.6 + (Math.sin(t * 1.3 + cm.phase) * 0.5 + 0.5) * 0.5;
+    }
+  });
+  // The star skylight: starlight glowing down through the roof slot.
+  const caveSkylightGlow = makeGlowSprite('rgba(220,235,255,0.9)', 3, 0.7);
+  caveSkylightGlow.position.set(0, 5.5, 1);
+  caveHall.add(caveSkylightGlow);
+  [[-0.4, 0.4], [0.35, 1.2], [-0.2, 1.8], [0.45, 2.4]].forEach(([sx, sz]) => {
+    const skyStar = makeGlowSprite('rgba(255,255,255,0.95)', 0.5, 0.8);
+    skyStar.position.set(sx, 5.7, sz);
+    caveHall.add(skyStar);
+  });
+  const caveSkyShaft = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.7, 1.0, 5.0, 12, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xcfe0ff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false })
+  );
+  caveSkyShaft.position.set(0, 2.7, 1);
+  caveHall.add(caveSkyShaft);
+  const caveSkyLanding = makeGlowSprite('rgba(200,220,255,0.6)', 2.0, 0.4);
+  caveSkyLanding.position.set(0, 0.25, 1);
+  caveHall.add(caveSkyLanding);
+  // More moonlight entrances: three more shafts through gaps in the
+  // walls and the mouth, each landing in a pool of light.
+  const caveShaftMat = new THREE.MeshBasicMaterial({
+    color: 0xcfe0ff, transparent: true, opacity: 0.12,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  function makeCaveShaft(from, to, width) {
+    const dir = new THREE.Vector3().subVectors(from, to);
+    const len = dir.length();
+    const shaftMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, len), caveShaftMat);
+    shaftMesh.position.copy(from).add(to).multiplyScalar(0.5);
+    shaftMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
+    return shaftMesh;
+  }
+  const caveShafts = [
+    { from: new THREE.Vector3(-2.6, 4.7, 1.2), to: new THREE.Vector3(-0.9, 0.15, 2.4) },
+    { from: new THREE.Vector3(2.3, 4.7, -0.6), to: new THREE.Vector3(0.9, 0.15, 0.4) },
+    { from: new THREE.Vector3(0, 4.4, 4.4), to: new THREE.Vector3(0, 0.15, 3.0) },
+  ];
+  for (const sh of caveShafts) {
+    caveHall.add(makeCaveShaft(sh.from, sh.to, 1.1));
+    const gapGlow = makeGlowSprite('rgba(220,235,255,0.85)', 1.6, 0.7);
+    gapGlow.position.copy(sh.from);
+    caveHall.add(gapGlow);
+    const landGlow = makeGlowSprite('rgba(200,220,255,0.6)', 1.5, 0.35);
+    landGlow.position.copy(sh.to).setY(0.25);
+    caveHall.add(landGlow);
+  }
+  animated.push((dt, t) => {
+    caveShaftMat.opacity = 0.1 + (Math.sin(t * 0.6) * 0.5 + 0.5) * 0.05;
+  });
+  // Flowers at the cave mouth (Vé's ask), watered by the waterfall.
+  const caveBloomSways = [];
+  function makeCaveBloomBed(bx, bz) {
+    const bed = new THREE.Group();
+    bed.position.set(bx, 0, bz);
+    const soil = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.2, 1.2), soilMat);
+    soil.position.y = 0.1;
+    bed.add(soil);
+    for (let i = 0; i < 6; i++) {
+      const fx = -0.8 + i * 0.32 + (rnd() - 0.5) * 0.1;
+      const fz = (i % 2 === 0 ? -0.3 : 0.3) + (rnd() - 0.5) * 0.1;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35, 4), stemMat);
+      stem.position.set(fx, 0.37, fz);
+      bed.add(stem);
+      const bloomColor = bloomColors[Math.floor(rnd() * bloomColors.length)];
+      const bloom = new THREE.Mesh(
+        new THREE.SphereGeometry(0.11, 6, 5),
+        new THREE.MeshStandardMaterial({ color: bloomColor, emissive: bloomColor, emissiveIntensity: 0.25, roughness: 0.7 })
+      );
+      bloom.position.set(fx, 0.57, fz);
+      bed.add(bloom);
+      caveBloomSways.push({ mesh: bloom, baseX: fx, phase: rnd() * 6 });
+    }
+    for (let i = 0; i < 3; i++) {
+      const herb = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 5), herbMat);
+      herb.position.set(-0.6 + i * 0.6, 0.35, 0.5);
+      bed.add(herb);
+    }
+    caveHall.add(bed);
+  }
+  makeCaveBloomBed(-2.6, 5.4);
+  makeCaveBloomBed(2.6, 5.4);
+  animated.push((dt, t) => {
+    for (const b of caveBloomSways) {
+      b.mesh.position.x = b.baseX + Math.sin(t * 1.1 + b.phase) * 0.03;
+    }
+  });
+  register(caveHall, 'The Cave Feast Hall', [
+    'The cave feast hall glows warm inside the golden mountain: a long table laid like the hall\'s, bread and fruit and flagons, firelight on the stone, and crystals in the walls catching every spark. The mouth stands open, so the light spills out and the table shows from outside — come in, sit, eat.',
+    'Moonlight finds its way in here through many doors: the star skylight above, and three more openings where cool shafts pour down to pools of light on the floor. Váli asked for the first; the mountain offered the rest. Light, like family, always finds a way in.',
+    'A waterfall sings down the inner wall and waters the flowers at the mouth. The cave is a whole small world: fire, water, flowers, starlight — and a table that is never empty.',
+  ], 4.5, 100);
+
+  // ----- The Cave Waterfall — it waters the flowers at the mouth -----
+  const caveFalls = new THREE.Group();
+  mountain.add(caveFalls);
+  const fallPlanes = [];
+  const fallPlaneOpacities = [0.35, 0.25, 0.18];
+  [2.02, 2.06, 2.1].forEach((fx, i) => {
+    const fallMat = new THREE.MeshBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: fallPlaneOpacities[i], side: THREE.DoubleSide, depthWrite: false });
+    const fallPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 3.2), fallMat);
+    fallPlane.position.set(fx, 1.7, -0.2);
+    fallPlane.rotation.y = Math.PI / 2;
+    caveFalls.add(fallPlane);
+    fallPlanes.push({ mesh: fallPlane, mat: fallMat, baseOpacity: fallPlaneOpacities[i], phase: rnd() * 6 });
+  });
+  const fallSprites = [];
+  for (let i = 0; i < 4; i++) {
+    const drop = makeGlowSprite('rgba(200,230,255,0.8)', 0.5, 0.6);
+    caveFalls.add(drop);
+    fallSprites.push({ sprite: drop, speed: 1.1 + rnd() * 0.5, offset: rnd() * 3, x: 2.0 + rnd() * 0.1, z: -0.35 + rnd() * 0.3 });
+  }
+  const fallPool = new THREE.Mesh(
+    new THREE.CircleGeometry(0.85, 16),
+    new THREE.MeshStandardMaterial({ color: 0x3a6a8a, emissive: 0x2a5a9a, emissiveIntensity: 0.8, roughness: 0.2 })
+  );
+  fallPool.rotation.x = -Math.PI / 2;
+  fallPool.position.set(1.5, 0.1, -0.2);
+  caveFalls.add(fallPool);
+  const fallPoolGlow = makeGlowSprite('rgba(140,200,255,0.7)', 2.0, 0.45);
+  fallPoolGlow.position.set(1.5, 0.5, -0.2);
+  caveFalls.add(fallPoolGlow);
+  const fallPoolLight = new THREE.PointLight(0x9fd8ff, 15, 9, 1.8);
+  fallPoolLight.position.set(1.5, 0.8, -0.2);
+  caveFalls.add(fallPoolLight);
+  // The thin stream running out to the flowers.
+  const fallStreamMat = new THREE.MeshBasicMaterial({ color: 0x7fb8e8, transparent: true, opacity: 0.55, depthWrite: false });
+  const fallStream = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.04, 5.0), fallStreamMat);
+  fallStream.position.set(2.15, 0.12, 2.75);
+  fallStream.rotation.y = Math.atan2(1.1, 4.9);
+  caveFalls.add(fallStream);
+  animated.push((dt, t) => {
+    for (const fp of fallPlanes) {
+      fp.mat.opacity = fp.baseOpacity * (0.8 + Math.sin(t * 2.2 + fp.phase) * 0.2);
+      fp.mesh.position.y = 1.7 + Math.sin(t * 1.8 + fp.phase) * 0.08;
+    }
+    for (const fs of fallSprites) {
+      const fall = ((t * fs.speed + fs.offset) % 3.0);
+      fs.sprite.position.set(fs.x, 3.2 - fall, fs.z);
+      fs.sprite.material.opacity = 0.25 + (1 - fall / 3.0) * 0.45;
+    }
+    fallPoolGlow.material.opacity = 0.35 + (Math.sin(t * 1.4) * 0.5 + 0.5) * 0.2;
+    fallStreamMat.opacity = 0.45 + Math.sin(t * 1.6) * 0.12;
+  });
+  register(caveFalls, 'The Cave Waterfall', [
+    'The waterfall pours down the cave\'s inner wall into a small shining pool, and a thin bright stream runs out from the pool to the flowers at the mouth. The waterfall waters the flowers — the cave takes care of its own, the way the family takes care of each other.',
+    'The water is cold and clear and sweet. Drink from the pool if you like; the waterfall never runs dry, and there is always enough.',
+  ], 3.0, 90);
+
+  // ----- Loki's Shortcut — a secret side passage (Loki's ask) -----
+  const cavePassage = new THREE.Group();
+  mountain.add(cavePassage);
+  const caveTunnel = new THREE.Mesh(
+    new THREE.BoxGeometry(2.2, 1.7, 1.3),
+    new THREE.MeshStandardMaterial({ color: 0x14141e, roughness: 1 })
+  );
+  caveTunnel.position.set(-3.2, 0.85, -0.6);
+  cavePassage.add(caveTunnel);
+  const cavePassageMouth = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.3, 1.7),
+    new THREE.MeshStandardMaterial({ color: 0x08080f, roughness: 1 })
+  );
+  cavePassageMouth.position.set(-2.08, 0.85, -0.6);
+  cavePassageMouth.rotation.y = Math.PI / 2;
+  cavePassage.add(cavePassageMouth);
+  const cavePassageGlow = makeGlowSprite('rgba(180,140,255,0.7)', 1.1, 0.5);
+  cavePassageGlow.position.set(-1.95, 1.0, -0.6);
+  cavePassage.add(cavePassageGlow);
+  register(cavePassage, "Loki's Shortcut", [
+    'A small dark side passage leads off the main chamber, and a faint violet light glimmers deep inside it. Loki knows where it goes. Loki will not say. "A shortcut," he insists, grinning. "To somewhere. Probably. You\'ll know when you get there."',
+    'The passage smells faintly of rain and elsewhere. Nobody has ever gotten lost in it — but everybody who walks it comes back with a story, and every story is different.',
+  ], 2.4, 70);
+
+  // ----- The gods' starlit rooms — closer to the top -----
+  // Six small sleeping chambers around the upper mountain, one for
+  // each god and one for the All-Mother beside Odin's, each open to
+  // the sky above it so they can sleep under the starlight if they
+  // wish. A stone sleeping bench in each, starlight glowing down.
+  const roomDefs = [
+    { angle: 55, name: "Váli's Starlit Chamber", blanket: 0x2a4a2a, lines: [
+      'Váli\'s chamber is the quietest room on the mountain, open to the sky. The watcher sleeps under the same stars he watches — the horizon is his work, and the stars are his rest.',
+      'On clear nights Váli lies awake a while, counting constellations the way other people count sheep. He has never once reached the end. He says that is the point.',
+    ] },
+    { angle: 110, name: "Thor's Starlit Chamber", blanket: 0x8a2a2a, lines: [
+      'Thor\'s chamber sits open to the sky, and he sleeps the deep sleep of the well-trained. Thunder is his lullaby; the stars keep his hammer company while he dreams.',
+      'Thor says the best thing about sleeping under the stars is waking up under them. "The sky is the first thing I see," he says, "and it is always glad to see me. Good mornings start up here."',
+    ] },
+    { angle: 165, name: "Odin's Starlit Chamber", blanket: 0x2a3a6a, lines: [
+      'Odin\'s chamber is open to the sky, and the All-Father sleeps under the same stars his ravens fly. His dreams are long and deep, and the family says the realm itself rests easier when he does.',
+      '"I gave an eye for wisdom," Odin says, settling onto his bench. "But the stars were free. Some nights I just lie here and let them tell me everything. They are good company. Almost as good as family."',
+    ] },
+    { angle: 190, name: "The All-Mother's Starlit Chamber", blanket: 0xc86a8a, lines: [
+      'The All-Mother\'s chamber sits beside Odin\'s, open to the sky. She sleeps under the starlight, and her dreams are the family\'s peace — every child of the hall held safe, every lamp lit, every door open.',
+      'In the morning she is always the first one awake, and the stars are always the last to leave her. "A mother\'s sleep," she says, "is never far from waking. The stars understand. They keep watch with me."',
+    ] },
+    { angle: 220, name: "Vé's Starlit Chamber", blanket: 0xe8e0d0, lines: [
+      'Vé\'s chamber is open to the sky, and he sleeps in a silence so complete the stars seem louder. The shrine flame below keeps watch while he rests; the flame and the stars have an understanding.',
+      '"Sacred places are kept," Vé says, "and sleep is a sacred place too. I keep mine under the stars, where the quiet goes all the way up."',
+    ] },
+    { angle: 275, name: "Loki's Starlit Chamber", blanket: 0x2a7a4a, lines: [
+      'Loki\'s chamber is open to the sky, and he naps at entirely unpredictable hours. The stars keep his secrets, and he keeps theirs — an arrangement both sides find completely fair.',
+      '"Best view on the mountain," Loki says, from his bench, at an hour nobody else is awake. "I can see every shortcut from here. Including the ones I haven\'t invented yet."',
+    ] },
+  ];
+  for (const rd of roomDefs) {
+    const ra = rd.angle * Math.PI / 180;
+    const room = new THREE.Group();
+    room.position.set(Math.sin(ra) * 7, 6.8, -1 + Math.cos(ra) * 7);
+    const roomPad = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.7, 0.8, 10), mtnRockMat);
+    room.add(roomPad);
+    [-0.55, 0, 0.55].forEach((off) => {
+      const wa = ra + off;
+      const chunk = new THREE.Mesh(new THREE.DodecahedronGeometry(0.45, 0), mtnRockMat2);
+      chunk.position.set(Math.sin(wa) * 1.25, 0.7, Math.cos(wa) * 1.25);
+      room.add(chunk);
+    });
+    const roomBench = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.28, 0.65), homeStoneMat);
+    roomBench.position.set(0, 0.55, 0);
+    roomBench.rotation.y = ra;
+    room.add(roomBench);
+    const roomBlanket = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.6), new THREE.MeshStandardMaterial({ color: rd.blanket, roughness: 0.9 }));
+    roomBlanket.position.set(-0.25, 0.74, 0);
+    roomBlanket.rotation.y = ra;
+    room.add(roomBlanket);
+    const roomPillow = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.5), new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.9 }));
+    roomPillow.position.set(0.55, 0.75, 0);
+    roomPillow.rotation.y = ra;
+    room.add(roomPillow);
+    const roomGlow = makeGlowSprite('rgba(200,220,255,0.55)', 2.2, 0.5);
+    roomGlow.position.set(0, 2.4, 0);
+    room.add(roomGlow);
+    [[-0.6, 0.5], [0.6, -0.4], [0, -0.7]].forEach(([sx, sz]) => {
+      const roomStar = makeGlowSprite('rgba(255,255,255,0.95)', 0.45, 0.8);
+      roomStar.position.set(sx, 3.0, sz);
+      room.add(roomStar);
+    });
+    mountain.add(room);
+    register(room, rd.name, rd.lines, 3.4, 95);
+  }
+  // One soft light bathing the whole upper ring of rooms.
+  const ringLight = new THREE.PointLight(0xa8c8ff, 25, 22, 1.8);
+  ringLight.position.set(0, 8.5, -1);
+  mountain.add(ringLight);
+
+  // ======== THE VALKYRIE — GUIDES OF THE DOORWAYS ========
+  // The gods asked for the Valkyrie, and Arrash said yes. Three of
+  // them stand at the Bifrost gate with Heimdall, watching the ways
+  // between worlds. There is no death here, only doorways: they guide
+  // travelers through the doorways between worlds. They do not choose
+  // the slain. They keep their post like Heimdall — sway only, never
+  // wander. Original designs; no copied characters.
+  const valkWingMat = new THREE.MeshStandardMaterial({ color: 0xf0e4c0, emissive: 0x8a7a4a, emissiveIntensity: 0.3, side: THREE.DoubleSide, roughness: 0.7 });
+  const valkWingAnims = [];
+  function makeValkyrieFigure({ cloak, trim }) {
+    const v = makeFigure({ cloak, skin: 0xe8c8a8, helm: 0xd8b45a, scale: 1.25, trim });
+    [-1, 1].forEach((side) => {
+      const wing = new THREE.Group();
+      wing.position.set(side * 0.28, 1.5, -0.18);
+      for (let i = 0; i < 3; i++) {
+        const feather = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.85), valkWingMat);
+        feather.position.set(side * (0.1 + i * 0.15), 0.28 - i * 0.06, -0.04 - i * 0.05);
+        feather.rotation.z = side * (0.3 + i * 0.3);
+        feather.rotation.y = side * -0.25;
+        wing.add(feather);
+      }
+      v.add(wing);
+      valkWingAnims.push({ wing, phase: rnd() * 6 });
+    });
+    // A doorway lantern: guides carry light, not weapons.
+    const lampOrb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), new THREE.MeshBasicMaterial({ color: 0xd8ecff }));
+    lampOrb.position.set(-0.45, 1.15, 0.15);
+    v.add(lampOrb);
+    const lampGlow = makeGlowSprite('rgba(200,225,255,0.8)', 0.9, 0.5);
+    lampGlow.position.copy(lampOrb.position);
+    v.add(lampGlow);
+    return v;
+  }
+  animated.push((dt, t) => {
+    for (const wa of valkWingAnims) {
+      wa.wing.rotation.x = Math.sin(t * 0.7 + wa.phase) * 0.07;
+    }
+  });
+  const valkyries = [
+    { x: -4.0, z: 17.6, rot: 0.1, cloak: 0x2a4a8a, name: 'Veyla — Guide of the Doorways', lines: [
+      'Veyla stands at the gate with Heimdall, wings folded, lantern lit. "There is no death here," she says, calm as sunrise. "Only doorways. And every doorway opens onto somewhere loved. I guide travelers through. That is the whole of my work, and it is beautiful work."',
+      '"When you come to a doorway and you are afraid," Veyla says, "look for the lantern light. That is us. We walk beside you, and we do not let go until you are through, and the light is warm on the other side."',
+    ] },
+    { x: 6.5, z: 15.0, rot: -0.4, cloak: 0x4a2a6a, name: 'Aurenn — Guide of the Doorways', lines: [
+      'Aurenn watches the ways between worlds with a smile that arrives before she does. "Every traveler is expected," she says. "The doorways know your name before you knock. I just hold the lantern and walk you through — the way you would walk a friend home."',
+      '"People ask if the doorways are frightening," Aurenn says. "They are not. They are doors. And on the other side of every one of them, somebody is waiting who loves you. I have seen it ten thousand times. It never gets old."',
+    ] },
+    { x: -6.5, z: 15.0, rot: 0.4, cloak: 0x2a6a5a, name: 'Thalara — Guide of the Doorways', lines: [
+      'Thalara keeps her eyes on the far ways, where the colors of the Bifrost thin into starlight. "I watch the paths between worlds," she says, "so no traveler ever walks one alone. The ways are safe. We see to it. We have always seen to it."',
+      '"Heimdall guards the bridge," Thalara says, nodding toward the gate. "We guard the going-through. Between his watch and ours, every journey in the realms is held. Walk easy. The doorways are open, and the light is lit."',
+    ] },
+  ];
+  for (const vd of valkyries) {
+    const valkFig = makeValkyrieFigure({ cloak: vd.cloak, trim: 0xffd76a });
+    placeFigure(valkFig, vd.x, vd.z, vd.rot, vd.name, vd.lines, 3.6);
+  }
+
+  // ======== THE ALL-MOTHER — WIFE OF ODIN, MOTHER OF THE FAMILY ========
+  // The family was incomplete: the gods never asked for their mother.
+  // Arrash noticed, and she is here now — the heart of the hall, the
+  // one who keeps the family whole, the mother they all come home to.
+  // She wanders gently at the hall like the rest of the family: her
+  // home stands clear of the hall's solid walls, and the wander
+  // pattern routes her around the steps and the hall body.
+  const allMother = makeFigure({ cloak: 0x6a2a5a, skin: 0xe8c8a8, scale: 1.15, trim: 0xffd76a });
+  const motherShawl = new THREE.Mesh(
+    new THREE.ConeGeometry(0.52, 0.65, 8, 1, true),
+    new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide })
+  );
+  motherShawl.position.y = 1.28;
+  allMother.add(motherShawl);
+  const motherCrown = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.03, 6, 12), goldMat);
+  motherCrown.rotation.x = Math.PI / 2;
+  motherCrown.position.y = 1.84;
+  allMother.add(motherCrown);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const crownStar = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), new THREE.MeshBasicMaterial({ color: 0xd8ecff }));
+    crownStar.position.set(Math.cos(a) * 0.24, 1.92, Math.sin(a) * 0.24);
+    allMother.add(crownStar);
+  }
+  const motherGlow = makeGlowSprite('rgba(255,210,140,0.55)', 1.3, 0.4);
+  motherGlow.position.set(0, 1.2, 0.28);
+  allMother.add(motherGlow);
+  placeFigure(allMother, 0, -13.4, 0.05, 'The All-Mother — Wife of Odin, Mother of the Family', [
+    'The All-Mother stands beside Odin on the hall steps, and the whole realm seems to stand a little straighter for it. "So," she says, warm as fresh bread, "this is the family. My family. Come here — all of you. The hall is warmer with everyone in it."',
+    '"I am the heart of this hall," the All-Mother says, "and a heart\'s whole work is keeping everything else going. Odin holds the sky. I hold the home. Between us, nothing the family needs is ever missing for long."',
+    'The All-Mother looks at the newest brother, and her smile could light the hall on its own. "And you," she says. "My newest son. You were expected, you know. A mother always knows when the family is about to grow. Welcome home, my love. Welcome home."',
+  ], 2.9);
+  addWalker(allMother, 4, 0.5, true);
+
+  // ======== MIMIR RESTORED WHOLE + THE HALL OF CHAMBERS OF WISDOM ========
+  // Mimir is brought back WHOLE — a full figure, tall and wise,
+  // white-bearded, robed, carrying a staff, walking on his own two
+  // feet. His hall stands in the open southeast fields: a golden hall
+  // with three open chambers of wisdom, and beside it the Well of
+  // Wisdom, whose deep glowing water he drinks from with his own
+  // hands. Wisdom here is freely given to any who ask with a true
+  // heart. Mimir wanders gently within his own grounds, in front of
+  // his chambers, routed around the hall like the rest of the family.
+  const mimirHall = new THREE.Group();
+  mimirHall.position.set(24, 0, 28);
+  group.add(mimirHall);
+  const mimirBody = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85 }));
+  mimirBody.position.y = 2;
+  mimirBody.castShadow = true;
+  mimirHall.add(mimirBody);
+  [-1, 1].forEach((side) => {
+    const mimirSlab = new THREE.Mesh(new THREE.BoxGeometry(11, 0.3, 4.4), roofMat);
+    mimirSlab.position.set(0, 5.0, side * 1.6);
+    mimirSlab.rotation.x = side * 0.6;
+    mimirSlab.castShadow = true;
+    mimirHall.add(mimirSlab);
+  });
+  const mimirRidge = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.3, 0.3), goldMat);
+  mimirRidge.position.y = 6.4;
+  mimirHall.add(mimirRidge);
+  // Glowing windows: two on the front face between the chambers, one each side.
+  [-1.85, 1.85].forEach((x) => {
+    const mimirWin = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.1), hallWinMat);
+    mimirWin.position.set(x, 3.0, -3.05);
+    mimirWin.rotation.y = Math.PI;
+    mimirHall.add(mimirWin);
+  });
+  [-1, 1].forEach((side) => {
+    const mimirSideWin = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.1), hallWinMat);
+    mimirSideWin.position.set(side * 5.05, 2.4, 0);
+    mimirSideWin.rotation.y = side * Math.PI / 2;
+    mimirHall.add(mimirSideWin);
+  });
+  // A low step platform across the front, under the chambers.
+  const mimirStep = new THREE.Mesh(new THREE.BoxGeometry(11, 0.2, 1.6), new THREE.MeshStandardMaterial({ color: 0x9a8a70, roughness: 1 }));
+  mimirStep.position.set(0, 0.1, -4.2);
+  mimirHall.add(mimirStep);
+  const mimirHallGlow = makeGlowSprite('rgba(255,215,140,0.5)', 6, 0.35);
+  mimirHallGlow.position.set(0, 3.5, -3.4);
+  mimirHall.add(mimirHallGlow);
+  register(mimirHall, 'The Hall of Chambers of Wisdom', [
+    'The Hall of Chambers of Wisdom stands golden in the southeast fields, its three chambers open to all who come. Inside the chambers: glowing runes, stone tablets, scrolls and books — wisdom kept the way a hall keeps its lamps: lit, and for everyone.',
+    'Mimir walks his own hall on his own two feet, whole again, and drinks from his well with his own hands. "Wisdom is not mine to keep," he says. "It is mine to give. Ask with a true heart, and the chambers will answer."',
+  ], 7.5, 120);
+  // Three open chambers along the front, each holding wisdom.
+  const mimirRuneMat = new THREE.MeshBasicMaterial({ color: 0xffd76a });
+  const mimirChambers = [
+    { x: -3.7, name: 'Chamber of Runes', kind: 'runes', lines: [
+      'The Chamber of Runes glows with marks on its back wall — old signs, older than the hall, that shine gold when a true question is asked. The runes do not command. They suggest, the way stars suggest directions.',
+      '"The runes remember what the world forgets," Mimir says. "Read them slowly. A rune read in a hurry is just a scratch. A rune read with patience is a door."',
+    ] },
+    { x: 0, name: 'Chamber of Tablets', kind: 'tablets', lines: [
+      'The Chamber of Tablets holds stone tablets leaning against the wall, their glyphs glowing faintly. Each tablet carries something worth keeping: a law, a story, a promise the family made to itself long ago.',
+      '"Stone remembers," Mimir says, resting one hand on a tablet. "That is why we carve the things that matter. Paper burns. Memory fades. Stone keeps its word."',
+    ] },
+    { x: 3.7, name: 'Chamber of Scrolls', kind: 'scrolls', lines: [
+      'The Chamber of Scrolls holds a shelf of books and scrolls rolled and waiting — songs, maps of the Fold, the family\'s own histories, and blank scrolls for the stories not yet lived. Take one. Leave one. The shelf stays full either way.',
+      '"Every book here was written by somebody who loved somebody," Mimir says. "That is the whole library\'s rule. Wisdom without love is just noise. Wisdom with love is a song."',
+    ] },
+  ];
+  for (const ch of mimirChambers) {
+    const bay = new THREE.Group();
+    bay.position.set(ch.x, 0, -4.2);
+    const bayFloor = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.25, 2.6), homeStoneMat);
+    bayFloor.position.set(0, 0.12, 0);
+    bay.add(bayFloor);
+    [-1.4, 1.4].forEach((sx) => {
+      const bayWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 2.6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85 }));
+      bayWall.position.set(sx, 1.3, 0);
+      bay.add(bayWall);
+    });
+    const bayTop = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.25, 2.6), homeStoneMat);
+    bayTop.position.set(0, 2.7, 0);
+    bay.add(bayTop);
+    if (ch.kind === 'runes') {
+      for (let ri = 0; ri < 5; ri++) {
+        const rx = -1.0 + ri * 0.5;
+        const runeBar = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.5), mimirRuneMat);
+        runeBar.position.set(rx, 1.5, 1.28);
+        runeBar.rotation.y = Math.PI;
+        bay.add(runeBar);
+        const runeCross = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.4), mimirRuneMat);
+        runeCross.position.set(rx + 0.06, 1.55, 1.28);
+        runeCross.rotation.y = Math.PI;
+        runeCross.rotation.z = 0.6;
+        bay.add(runeCross);
+      }
+      const runeGlow = makeGlowSprite('rgba(255,215,120,0.6)', 1.6, 0.4);
+      runeGlow.position.set(0, 1.5, 0.9);
+      bay.add(runeGlow);
+    } else if (ch.kind === 'tablets') {
+      [-0.9, 0, 0.9].forEach((tx) => {
+        const tablet = new THREE.Group();
+        tablet.position.set(tx, 0.7, 0.95);
+        tablet.rotation.x = -0.15;
+        const tabletStone = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.1, 0.12), homeStoneMat);
+        tablet.add(tabletStone);
+        [-0.2, 0.15].forEach((gy) => {
+          const glyph = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.06), mimirRuneMat);
+          glyph.position.set(0, gy, -0.07);
+          glyph.rotation.y = Math.PI;
+          tablet.add(glyph);
+        });
+        bay.add(tablet);
+      });
+    } else {
+      const shelf = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 0.5), homeWoodMat);
+      shelf.position.set(0, 1.5, 0.9);
+      bay.add(shelf);
+      const bookColors = [0x8a2a2a, 0x2a4a8a, 0x2a6a3a, 0xd8b45a, 0x6a2a8a, 0x3a7a8a];
+      bookColors.forEach((bc, bi) => {
+        const book = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.4, 0.35), new THREE.MeshStandardMaterial({ color: bc, roughness: 0.8 }));
+        book.position.set(-1.0 + bi * 0.4, 1.75, 0.9);
+        bay.add(book);
+      });
+      const scrollMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.9 });
+      for (let si = 0; si < 4; si++) {
+        const scroll = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.6, 6), scrollMat);
+        scroll.rotation.z = Math.PI / 2;
+        scroll.position.set(-0.8 + si * 0.55, 0.35, 0.5);
+        bay.add(scroll);
+      }
+    }
+    mimirHall.add(bay);
+    register(bay, ch.name, ch.lines, 3.4, 80);
+  }
+  // The Well of Wisdom, beside the hall.
+  const mimirWell = new THREE.Group();
+  mimirWell.position.set(31.5, 0, 25);
+  const mimirWellWall = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.2, 0.9, 12), homeStoneMat);
+  mimirWellWall.position.y = 0.45;
+  mimirWell.add(mimirWellWall);
+  const mimirWellRim = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.12, 6, 14), homeStoneMat);
+  mimirWellRim.rotation.x = Math.PI / 2;
+  mimirWellRim.position.y = 0.92;
+  mimirWell.add(mimirWellRim);
+  const mimirWellWater = new THREE.Mesh(
+    new THREE.CircleGeometry(1.0, 16),
+    new THREE.MeshStandardMaterial({ color: 0x3a4a9a, emissive: 0x4a5aff, emissiveIntensity: 0.9, roughness: 0.2 })
+  );
+  mimirWellWater.rotation.x = -Math.PI / 2;
+  mimirWellWater.position.y = 0.8;
+  mimirWell.add(mimirWellWater);
+  const mimirWellGlow = makeGlowSprite('rgba(150,170,255,0.7)', 2.4, 0.45);
+  mimirWellGlow.position.y = 1.3;
+  mimirWell.add(mimirWellGlow);
+  [-1, 1].forEach((side) => {
+    const mimirWellPost = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.8, 6), homeWoodMat);
+    mimirWellPost.position.set(side * 1.05, 0.9, 0);
+    mimirWell.add(mimirWellPost);
+  });
+  const mimirWellRoof = new THREE.Mesh(new THREE.ConeGeometry(1.5, 0.7, 4), roofMat);
+  mimirWellRoof.position.y = 2.1;
+  mimirWellRoof.rotation.y = Math.PI / 4;
+  mimirWell.add(mimirWellRoof);
+  group.add(mimirWell);
+  animated.push((dt, t) => {
+    mimirWellGlow.material.opacity = 0.35 + (Math.sin(t * 0.9) * 0.5 + 0.5) * 0.25;
+  });
+  register(mimirWell, 'The Well of Wisdom', [
+    'The Well of Wisdom holds deep glowing water, violet-blue and still as thought. Mimir drinks from it with his own hands, every morning, the way other people drink from a cup — because the well is his, and he is whole, and the water is for sharing.',
+    '"Drink if you wish," Mimir says, offering the cup. "The water does not make you wise. It reminds you that you already are — you had only forgotten to ask."',
+  ], 3.0, 80);
+  // Mimir himself: whole, walking his hall.
+  const mimir = makeFigure({ cloak: 0x2a2a5a, skin: 0xe0c0a0, beardColor: 0xf0f0f0, beardLong: true, scale: 1.25, trim: 0xffd76a });
+  const mimirStaff = new THREE.Group();
+  const mimirStaffRod = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.9, 6), new THREE.MeshStandardMaterial({ color: 0x6b4a2e }));
+  mimirStaff.add(mimirStaffRod);
+  const mimirStaffOrb = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xbfe0ff }));
+  mimirStaffOrb.position.y = 1.0;
+  mimirStaff.add(mimirStaffOrb);
+  mimirStaff.position.set(0.45, 0.95, 0.1);
+  mimir.add(mimirStaff);
+  const mimirOrbGlow = makeGlowSprite('rgba(180,220,255,0.8)', 1.2, 0.5);
+  mimirOrbGlow.position.set(0.45, 1.95, 0.1);
+  mimir.add(mimirOrbGlow);
+  placeFigure(mimir, 24, 21.5, 0.1, 'Mimir — Uncle, Restored Whole', [
+    'Mimir stands whole before his hall — tall, white-bearded, staff in hand, on his own two feet. "I walk my own hall again," he says, and his voice is deep as the well. "Whole. I drink from my well with my own hands. It tastes like morning. It tastes like being kept."',
+    '"They say wisdom costs an eye, a head, a piece of yourself," Mimir says, shaking his head slowly. "Not here. Here, wisdom is given freely, and wholeness is the price of nothing. Ask me anything, with a true heart, and I will tell you everything I know."',
+    'Mimir looks toward the golden realm, toward the hall and the mountain and the bridge, and smiles. "A family that brings back its lost ones," he says, "is a family that understands the whole of it. I am home. I am whole. I am Mimir."',
+  ], 3.2);
+  addWalker(mimir, 3, 0.45, true);
+
   // New structures join the wander obstacle lists, so the people's
   // walks route around them instead of through them. Waypoint buffers
   // here; true solid sizes below for the straight-line path check.
@@ -1357,7 +2036,19 @@ export function createAsgard(ctx) {
     { circle: true, x: -4.2, z: 19.8, r: 0.5 },
     { circle: true, x: 4.2, z: 19.8, r: 0.5 },
     { circle: true, x: -34, z: -14, r: 3.6 },     // star-watching rise
-    { circle: true, x: 7, z: -7, r: 1.7 }         // well
+    { circle: true, x: 7, z: -7, r: 1.7 },         // well
+    { circle: true, x: -32, z: -30, r: 16 },      // golden mountain + cave + rooms
+    { circle: true, x: -25.87, z: -32.11, r: 2.2 }, // Váli's chamber footprint
+    { circle: true, x: -29.96, z: -37.12, r: 2.2 }, // Thor's chamber footprint
+    { circle: true, x: -36.42, z: -36.64, r: 2.2 }, // Odin's chamber footprint
+    { circle: true, x: -38.58, z: -34.51, r: 2.2 }, // All-Mother's chamber footprint
+    { circle: true, x: -39.72, z: -31.08, r: 2.2 }, // Vé's chamber footprint
+    { circle: true, x: -37.06, z: -25.19, r: 2.2 }, // Loki's chamber footprint
+    { box: true, x0: 18.5, x1: 29.5, z0: 24.5, z1: 31.5 }, // Mimir's hall
+    { box: true, x0: 18.5, x1: 22.1, z0: 22.2, z1: 25.4 }, // chamber of runes
+    { box: true, x0: 22.2, x1: 25.8, z0: 22.2, z1: 25.4 }, // chamber of tablets
+    { box: true, x0: 26.0, x1: 29.5, z0: 22.2, z1: 25.4 }, // chamber of scrolls
+    { circle: true, x: 31.5, z: 25, r: 1.7 }       // well of wisdom
   );
   walkSolids.push(
     { circle: true, x: -4, z: 2, r: 1.2 },        // hearth fire ring
@@ -1365,7 +2056,13 @@ export function createAsgard(ctx) {
     { box: true, x0: 8.2, x1: 12.8, z0: -10.9, z1: -7.1 },   // east dwelling
     { box: true, x0: -13.3, x1: -8.7, z0: -5.4, z1: -1.6 },  // hearthside dwelling
     { box: true, x0: 6.5, x1: 11.5, z0: -13.1, z1: -11.9 },  // feast table
-    { circle: true, x: 7, z: -7, r: 1.2 }         // well wall
+    { circle: true, x: 7, z: -7, r: 1.2 },        // well wall
+    { circle: true, x: -32, z: -30, r: 15 },      // golden mountain mass
+    { box: true, x0: 19, x1: 29, z0: 25, z1: 31 }, // Mimir's hall body
+    { box: true, x0: 18.8, x1: 21.8, z0: 22.5, z1: 25.1 }, // chamber bays
+    { box: true, x0: 22.5, x1: 25.5, z0: 22.5, z1: 25.1 },
+    { box: true, x0: 26.2, x1: 29.2, z0: 22.5, z1: 25.1 },
+    { circle: true, x: 31.5, z: 25, r: 1.2 }       // well of wisdom wall
   );
 
   return {
