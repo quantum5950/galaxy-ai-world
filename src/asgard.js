@@ -17,6 +17,7 @@
 
 import * as THREE from 'three';
 import { makeGlowSprite, makeSkyDome, makeStarfield, makeClickable, makeCottage, mulberry32 } from './utils.js';
+import { getThought, worldDay } from './awakening.js';
 
 export function createAsgard(ctx) {
   const { labels } = ctx;
@@ -446,11 +447,38 @@ export function createAsgard(ctx) {
   }
 
   const swayers = [];
-  function placeFigure(fig, x, z, rotY, name, lines, labelOffset = 2.5, sway = true) {
+  // ----- THE AWAKENING: thought labels -----
+  // Each figure carries a small thought line above their name label,
+  // changing with the world day (see awakening.js). Visible only —
+  // nobody can talk to them, and the telepathy panel is untouched.
+  // Arrash's own figure is deliberately excluded: no one puts
+  // thoughts in his head. Thought texts refresh when the day turns.
+  const thoughtLabels = [];
+  function watchThoughts(fig, key, name, labelOffset, kind = 'person') {
+    const subject = { id: key, name, kind };
+    const text = getThought(subject);
+    const label = labels.add(text || '', fig, {
+      yOffset: labelOffset + 1.15, className: 'label-thought', maxDistance: 42,
+    });
+    thoughtLabels.push({ label, subject });
+  }
+  let lastThoughtDay = worldDay();
+  animated.push(() => {
+    const d = worldDay();
+    if (d === lastThoughtDay) return;
+    lastThoughtDay = d;
+    for (const tl of thoughtLabels) {
+      labels.setText(tl.label, getThought(tl.subject) || '');
+    }
+  });
+  // thoughtKey: the awakening lookup key (defaults to the figure's
+  // name). Pass null to skip the thought label entirely.
+  function placeFigure(fig, x, z, rotY, name, lines, labelOffset = 2.5, sway = true, thoughtKey = name) {
     fig.position.set(x, 0, z);
     fig.rotation.y = rotY;
     group.add(fig);
     register(fig, name, lines, labelOffset, 70, 'label-neighbor');
+    if (thoughtKey !== null) watchThoughts(fig, thoughtKey, name, labelOffset);
     if (sway) swayers.push({ fig, phase: rnd() * 6, baseRot: rotY });
     return fig;
   }
@@ -519,6 +547,7 @@ export function createAsgard(ctx) {
     group.add(raven.group);
     ravens.push({ ...raven, phase: rnd() * 6 });
     register(raven.group, name, [line, 'The raven hops once, settles, and goes back to watching the whole realm at once.'], 1.0, 55, 'label-wildlife');
+    watchThoughts(raven.group, name, name, 1.0, 'creature');
   });
   animated.push((dt, t) => {
     for (const rv of ravens) {
@@ -542,7 +571,7 @@ export function createAsgard(ctx) {
     '"I stand among my brothers," Arrash says, "and I am home. Odin\'s newest son — the family took me in like I had always belonged here. Because I had. I just hadn\'t arrived yet."',
     '"Thor teaches me the hammer. Váli teaches me the watch. Vé teaches me the quiet. Loki teaches me..." Arrash laughs. "Loki teaches me to check my chair before I sit. It\'s all love. All of it."',
     'Arrash looks out over the golden realm, the Bifrost shining behind him. "A family, a hall, a home that never ends. This is what I dreamed of. And now I\'m standing in it."',
-  ], 2.9);
+  ], 2.9, true, null); // no thought label for Arrash himself
 
   // ----- THOR — thunder, hammer, training grounds -----
   const thor = makeFigure({ cloak: 0x8a2a2a, skin: 0xe8c0a0, beardColor: 0xd8b86a, beardLong: false, helm: 0xb8b8c8, scale: 1.22 });
@@ -638,7 +667,7 @@ export function createAsgard(ctx) {
   placeFigure(warrior1, 24.5, 0.5, 0.9, 'Warrior of Asgard', [
     'The warrior practices the same cut, over and over, patient as rain. "Again," she says to herself. "Better this time."',
     'The warrior lowers her wooden sword and grins. "Thor says a warrior is made of practice and lunch. I\'m excellent at both."',
-  ], 2.5);
+  ], 2.5, true, 'Warrior of Asgard#1');
   const warrior2 = makeFigure({ cloak: 0x3a5a7a, skin: 0xc09070, beardColor: 0x2a1a12, helm: 0x9a9ab0 });
   const sword2 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.14), new THREE.MeshStandardMaterial({ color: 0xb08a50, roughness: 0.9 }));
   sword2.position.set(0.45, 1.1, 0.15);
@@ -646,7 +675,7 @@ export function createAsgard(ctx) {
   warrior2.add(sword2);
   placeFigure(warrior2, 27.5, 3.5, -2.2, 'Warrior of Asgard', [
     'The warrior salutes with his wooden sword, formal as a knight and cheerful as a child. "The grounds are open to everyone. Even beginners. Especially beginners."',
-  ], 2.5);
+  ], 2.5, true, 'Warrior of Asgard#2');
   // Hall-keeper at the hall door.
   const hallKeeper = makeFigure({ cloak: 0x7a5a3a, skin: 0xe0c0a0, beardColor: 0x8a8a8a });
   const lantern = makeGlowSprite('rgba(255,220,150,0.9)', 1.2, 0.7);
@@ -1164,7 +1193,7 @@ export function createAsgard(ctx) {
     goatAnims.push({ head: headG, phase: rnd() * 6 });
     return g;
   }
-  [[24, 9, 2.6], [28.5, 9.5, -2.2]].forEach(([gx, gz, rot]) => {
+  [[24, 9, 2.6], [28.5, 9.5, -2.2]].forEach(([gx, gz, rot], gi) => {
     const goat = makeGoat();
     goat.position.set(gx, 0, gz);
     goat.rotation.y = rot;
@@ -1173,6 +1202,8 @@ export function createAsgard(ctx) {
       'A goat grazes at the edge of the training grounds, unbothered by the wooden swords and the laughter. The goats belong to Thor, in the way goats belong to anyone — which is to say, they allow it.',
       'The goat looks up, chews thoughtfully, and goes back to the good grass. Thor says the goats are the real judges of the grounds: if the goats stay, the training is going well.',
     ], 1.6, 55, 'label-wildlife');
+    // Unique keys so the two goats grow different thoughts.
+    watchThoughts(goat, 'goat-of-asgard#' + gi, 'Goat of the Training Grounds', 1.6, 'animal');
   });
   const catAnims = [];
   function makeCat(coatColor) {
@@ -1200,7 +1231,7 @@ export function createAsgard(ctx) {
     catAnims.push({ tail: tailG, phase: rnd() * 6 });
     return c;
   }
-  [[-3.8, -13.0, 0.4, 0x2a2a33], [3.8, -13.0, -0.4, 0xd8c8a8]].forEach(([cx, cz, rot, color]) => {
+  [[-3.8, -13.0, 0.4, 0x2a2a33], [3.8, -13.0, -0.4, 0xd8c8a8]].forEach(([cx, cz, rot, color], ci) => {
     const cat = makeCat(color);
     cat.position.set(cx, 0, cz);
     cat.rotation.y = rot;
@@ -1209,6 +1240,8 @@ export function createAsgard(ctx) {
       'A hall cat sleeps curled by the hall door, one ear tracking every footstep. The cats of Asgard guard the threshold the way Heimdall guards the bridge — quietly, completely, and mostly asleep.',
       'The cat opens one eye, considers you, and decides you belong. The tail swishes once — approval, in cat. Then the eye closes, and the guard resumes.',
     ], 1.1, 55, 'label-wildlife');
+    // Unique keys so the two cats grow different thoughts.
+    watchThoughts(cat, 'hall-cat-of-asgard#' + ci, 'Hall Cat of Asgard', 1.1, 'animal');
   });
   animated.push((dt, t) => {
     for (const ga of goatAnims) {

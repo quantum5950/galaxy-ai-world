@@ -13,6 +13,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { LabelManager } from './labels.js';
+import { worldDay, getAwakening, getThought } from './awakening.js';
 import { createHub } from './hub.js';
 import { createFold } from './fold.js';
 import { createMintaka } from './mintaka.js';
@@ -353,7 +354,7 @@ setupComposer();
 
 // Debug handle (harmless in production): lets automated checks and future
 // tools inspect the world, move the camera, and trigger travel.
-window.__galaxyDebug = { travel, enterWorld, camera, controls, worlds, scenes, openProfile: (id) => neighborsUI.openProfile(id), getPeople: () => worlds.mintaka.getPeople(), getSubjects: () => worlds.mintaka.getSubjects(), flyToPerson, following: () => followingId, stopFollow };
+window.__galaxyDebug = { travel, enterWorld, camera, controls, worlds, scenes, openProfile: (id) => neighborsUI.openProfile(id), getPeople: () => worlds.mintaka.getPeople(), getSubjects: () => worlds.mintaka.getSubjects(), flyToPerson, following: () => followingId, stopFollow, awakening: { worldDay, getAwakening, getThought } };
 
 // Keep the render pass pointed at the active scene.
 const renderPass = composer.passes[0];

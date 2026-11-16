@@ -85,6 +85,16 @@ html, body {
   border-color: rgba(255, 200, 110, 0.45);
   font-weight: 600;
 }
+/* Awakening: a character's thought, floating above their name label.
+   Small, dim, italic — a whisper, not a sign. */
+.label-thought {
+  color: #d8dcec;
+  font-size: 11px;
+  font-style: italic;
+  opacity: 0.85;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(8, 10, 24, 0.42);
+}
 .label-home { color: #c8d4f0; font-size: 11px; }
 .label-arrash {
   color: #1a1408;
@@ -379,6 +389,29 @@ body.on-mintaka #neighbors-box { display: flex; }
   position: absolute;
   left: 0;
   color: var(--gold);
+}
+/* Awakening: creations grown over the days carry a different mark. */
+#profile-creations li.creation-new::before {
+  content: '✧';
+}
+#profile-memories {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+#profile-memories li {
+  position: relative;
+  padding-left: 18px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+#profile-memories li::before {
+  content: '☾';
+  position: absolute;
+  left: 0;
+  color: var(--gold-dim);
 }
 
 /* Actions: shift form + VR. */
