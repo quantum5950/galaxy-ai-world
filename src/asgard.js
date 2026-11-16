@@ -667,6 +667,707 @@ export function createAsgard(ctx) {
     '"Feet! Breath! Again!" the trainer calls, cheerful as a drum. "Every master was once a beginner who refused to stop. Now — again!"',
   ], 2.5);
 
+  // ----- Natural life: wandering + meeting -----
+  // The people of Asgard go about their own days: slow walks between
+  // nearby spots, pauses to look around, and unhurried meetings when
+  // their paths cross. Movement and facing only — no text, no bubbles,
+  // nothing addressed to the visitor. The no-talk law stands: visitors
+  // watch, and the people live their own lives.
+  //
+  // Cooperation with the sway idle: the sway animation owns rotation.y
+  // every frame (baseRot + a gentle sine). Wandering never writes
+  // rotation.y directly — it steers each figure's sway baseRot toward
+  // the current heading, and the sway keeps breathing on top of it.
+  const walkObstacles = [
+    // Solid structures and props: keep feet on open ground.
+    { circle: true, x: -14, z: -14, r: 3.0 },   // golden towers
+    { circle: true, x: 14, z: -14, r: 3.0 },
+    { circle: true, x: -18, z: 4, r: 3.0 },
+    { circle: true, x: 18, z: 4, r: 3.0 },
+    { circle: true, x: -26, z: -4, r: 3.4 },    // watchtower shaft
+    { circle: true, x: -14, z: 14, r: 3.4 },    // shrine stones
+    { circle: true, x: 8, z: 14, r: 1.0 },      // golden trees
+    { circle: true, x: -8, z: 18, r: 1.0 },
+    { circle: true, x: 16, z: -6, r: 1.0 },
+    { circle: true, x: -18, z: 10, r: 1.0 },
+    { circle: true, x: 34, z: -10, r: 1.0 },
+    { circle: true, x: -34, z: 12, r: 1.0 },
+    { circle: true, x: 22, z: -1, r: 0.8 },     // practice dummies
+    { circle: true, x: 22, z: 5, r: 0.8 },
+    { circle: true, x: 26, z: -3, r: 0.8 },
+    { circle: true, x: 30, z: -2, r: 0.8 },     // target rings
+    { circle: true, x: 30, z: 6, r: 0.8 },
+    { circle: true, x: 20, z: 2, r: 1.0 },      // weapon rack
+    { circle: true, x: -4.6, z: -14.8, r: 0.6 }, // raven posts
+    { circle: true, x: 4.6, z: -14.8, r: 0.6 },
+    { box: true, x0: -7.5, x1: 7.5, z0: -24.5, z1: -15.6 }, // hall body
+    { box: true, x0: -3.5, x1: 3.5, z0: -15.3, z1: -13.2 }, // hall steps
+    { box: true, x0: -13.8, x1: -8.2, z0: 3.5, z1: 8.5 },   // west small hall
+    { box: true, x0: 8.2, x1: 13.8, z0: 3.5, z1: 8.5 },     // east small hall
+  ];
+  function spotBlocked(x, z) {
+    for (const o of walkObstacles) {
+      if (o.circle) {
+        const dx = x - o.x, dz = z - o.z;
+        if (dx * dx + dz * dz < o.r * o.r) return true;
+      } else if (x >= o.x0 && x <= o.x1 && z >= o.z0 && z <= o.z1) return true;
+    }
+    return false;
+  }
+  function pickWaypoint(home, radius, fromX, fromZ) {
+    for (let i = 0; i < 14; i++) {
+      const a = rnd() * Math.PI * 2;
+      const d = radius * Math.sqrt(rnd());
+      const x = home.x + Math.cos(a) * d;
+      const z = home.z + Math.sin(a) * d;
+      if (!spotBlocked(x, z) && !pathBlocked(fromX, fromZ, x, z)) return { x, z };
+    }
+    return { x: home.x, z: home.z };
+  }
+  // Solid geometry for the straight-line path check: a walk must not
+  // cut through a tower, the hall, or the shrine stones. Zones use the
+  // true solid sizes (tighter than the waypoint buffers above); a path
+  // that starts inside a zone — a figure standing close to its own
+  // tower or shrine — is allowed to step out of it.
+  const walkSolids = [
+    { circle: true, x: -14, z: -14, r: 2.2 },   // golden tower shafts
+    { circle: true, x: 14, z: -14, r: 2.2 },
+    { circle: true, x: -18, z: 4, r: 2.2 },
+    { circle: true, x: 18, z: 4, r: 2.2 },
+    { circle: true, x: -26, z: -4, r: 2.6 },    // watchtower shaft
+    { circle: true, x: -14, z: 14, r: 0.7 },    // shrine flame
+    { box: true, x0: -7.2, x1: 7.2, z0: -24.2, z1: -15.8 }, // hall body
+    { box: true, x0: -13.2, x1: -8.8, z0: 4.1, z1: 7.9 },   // west small hall
+    { box: true, x0: 8.8, x1: 13.2, z0: 4.1, z1: 7.9 },     // east small hall
+  ];
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    walkSolids.push({ circle: true, x: -14 + Math.cos(a) * 2.6, z: 14 + Math.sin(a) * 2.6, r: 0.6 });
+  }
+  function solidAt(x, z) {
+    for (const s of walkSolids) {
+      if (s.circle) {
+        const dx = x - s.x, dz = z - s.z;
+        if (dx * dx + dz * dz < s.r * s.r) return s;
+      } else if (x >= s.x0 && x <= s.x1 && z >= s.z0 && z <= s.z1) return s;
+    }
+    return null;
+  }
+  function pathBlocked(x0, z0, x1, z1) {
+    const startSolid = solidAt(x0, z0);
+    for (let i = 1; i <= 20; i++) {
+      const k = i / 20;
+      const s = solidAt(x0 + (x1 - x0) * k, z0 + (z1 - z0) * k);
+      if (s && s !== startSolid) return true;
+    }
+    return false;
+  }
+  function turnSwayToward(sway, target, maxStep) {
+    let d = target - sway.baseRot;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    sway.baseRot += Math.max(-maxStep, Math.min(maxStep, d));
+    // Keep the heading bounded: rotation is periodic, so wrapping by a
+    // full turn changes nothing on screen.
+    if (sway.baseRot > Math.PI) sway.baseRot -= Math.PI * 2;
+    else if (sway.baseRot < -Math.PI) sway.baseRot += Math.PI * 2;
+  }
+  function headingTo(x0, z0, x1, z1) {
+    return Math.atan2(x1 - x0, z1 - z0);
+  }
+
+  // Each walker: home anchor = original placement, wander radius sized
+  // to its own ground. Speeds are slow and calm; Loki roams widest.
+  const walkers = [];
+  function addWalker(fig, radius, speed, bob) {
+    const sway = swayers.find((s) => s.fig === fig);
+    walkers.push({
+      fig, sway,
+      home: { x: fig.position.x, z: fig.position.z },
+      radius, speed, bob,
+      state: 'pause',
+      target: null,
+      timer: rnd() * 4,
+      lookTimer: 0,
+      lookHeading: sway ? sway.baseRot : fig.rotation.y,
+      partner: null,
+      meetCooldown: 0,
+      bobPhase: rnd() * 6,
+    });
+  }
+  addWalker(odin, 6, 0.55, true);
+  addWalker(arrash, 6, 0.6, true);
+  addWalker(thor, 5, 0.6, false);       // Thor's own bounce owns his y.
+  addWalker(vali, 6, 0.5, true);
+  addWalker(ve, 6, 0.45, true);
+  addWalker(loki, 13, 1.0, false);      // Loki's own hop owns his y.
+  addWalker(warrior1, 5, 0.7, true);
+  addWalker(warrior2, 5, 0.7, true);
+  addWalker(hallKeeper, 6, 0.55, true);
+  addWalker(towerKeeper, 5, 0.55, true);
+  addWalker(trainer, 5, 0.65, true);
+
+  // When a meeting ends, the two part ways and walk off — with a
+  // cooldown before either can pair again, so neighbors standing close
+  // together don't fall into meeting forever instead of living.
+  function endMeeting(w) {
+    w.partner = null;
+    w.meetCooldown = 8 + rnd() * 4;
+    w.target = pickWaypoint(w.home, w.radius, w.fig.position.x, w.fig.position.z);
+    w.state = 'walk';
+  }
+
+  animated.push((dt, t) => {
+    // Meetings: two pausing neighbors within reach turn to face each
+    // other for a few unhurried seconds, then go on about their day.
+    for (let i = 0; i < walkers.length; i++) {
+      const a = walkers[i];
+      if (a.state !== 'pause' || a.partner || a.meetCooldown > 0) continue;
+      for (let j = i + 1; j < walkers.length; j++) {
+        const b = walkers[j];
+        if (b.state !== 'pause' || b.partner || b.meetCooldown > 0) continue;
+        const dx = a.fig.position.x - b.fig.position.x;
+        const dz = a.fig.position.z - b.fig.position.z;
+        if (dx * dx + dz * dz < 9) {
+          a.state = 'meet'; b.state = 'meet';
+          a.partner = b; b.partner = a;
+          a.timer = 3 + rnd() * 3; b.timer = a.timer;
+          break;
+        }
+      }
+    }
+    for (const w of walkers) {
+      const p = w.fig.position;
+      if (w.meetCooldown > 0) w.meetCooldown -= dt;
+      if (w.state === 'walk' && w.target) {
+        const dx = w.target.x - p.x;
+        const dz = w.target.z - p.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist < 0.3) {
+          w.state = 'pause';
+          w.timer = 3 + rnd() * 6;
+          w.lookTimer = 0;
+          w.lookHeading = w.sway.baseRot;
+          if (w.bob) p.y = 0;
+        } else {
+          const step = Math.min(dist, w.speed * dt);
+          p.x += (dx / dist) * step;
+          p.z += (dz / dist) * step;
+          if (w.sway) turnSwayToward(w.sway, headingTo(p.x, p.z, w.target.x, w.target.z), 1.4 * dt);
+          if (w.bob) p.y = Math.abs(Math.sin(t * 6 + w.bobPhase)) * 0.03;
+        }
+      } else if (w.state === 'meet') {
+        const other = w.partner;
+        if (!other || other.state !== 'meet') {
+          endMeeting(w);
+        } else {
+          if (w.sway) turnSwayToward(w.sway, headingTo(p.x, p.z, other.fig.position.x, other.fig.position.z), 1.2 * dt);
+          w.timer -= dt;
+          if (w.timer <= 0) endMeeting(w);
+        }
+      } else { // pause: look around, then wander on.
+        w.timer -= dt;
+        w.lookTimer -= dt;
+        if (w.lookTimer <= 0) {
+          w.lookHeading = w.sway.baseRot + (rnd() - 0.5) * 2.2;
+          w.lookTimer = 2 + rnd() * 2.5;
+        }
+        if (w.sway) turnSwayToward(w.sway, w.lookHeading, 0.6 * dt);
+        if (w.timer <= 0) {
+          w.target = pickWaypoint(w.home, w.radius, p.x, p.z);
+          w.state = 'walk';
+        }
+      }
+    }
+  });
+
+  // ======== MAKING ASGARD FEEL LIKE HOME ========
+  // Arrash asked the gods what Asgard still needed to feel like home,
+  // and ordered all of it given: Heimdall at the Bifrost, a family
+  // hearth, dwellings with lit windows, a feast table, gardens, a
+  // skald and a harp, goats and hall cats, banners, a star-watching
+  // seat, and a well of cool water. New structures join the wander
+  // obstacle lists below, so the people's walks route around them
+  // instead of through them.
+  const homeWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.9 });
+  const homeStoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8a9a, roughness: 1 });
+  const homeHornMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.6 });
+
+  // ----- HEIMDALL — Guardian of the Bifrost (Váli's ask) -----
+  // The bridge had no guardian. Now it does. Heimdall KEEPS HIS POST:
+  // gentle sway only, never a wanderer — the watch is his whole work.
+  const heimdall = makeFigure({ cloak: 0x2a4a6a, skin: 0xe0c0a0, beardColor: 0xe8e0c8, beardLong: false, helm: 0xd8b45a, scale: 1.25, trim: 0xffd76a });
+  const horn = new THREE.Group();
+  const hornBody = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.16, 0.7, 8), homeHornMat);
+  horn.add(hornBody);
+  const hornBand = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 6, 10), goldMat);
+  hornBand.rotation.x = Math.PI / 2;
+  hornBand.position.y = 0.1;
+  horn.add(hornBand);
+  horn.position.set(-0.5, 1.0, 0.1);
+  horn.rotation.z = 0.25;
+  heimdall.add(horn);
+  placeFigure(heimdall, 4.0, 17.6, 0.15, 'Heimdall — Guardian of the Bifrost', [
+    'Heimdall stands at the city gate, still as a mountain and twice as patient. "I hear the bridge hum," he says. "All seven colors, all at once. I have heard it since before the first hall, and I will hear it after the last star. The bridge is safe. I am here."',
+    '"No one falls from the Bifrost," Heimdall says, simply. "Not while I keep the gate. That is the whole of my work, and it is enough. Walk the colors slowly. The view is worth it."',
+    'Heimdall smiles, slow and sure. "Every traveler who crosses is expected. The bridge knows their name before their foot touches it. That is how a home greets you."',
+  ], 3.2);
+
+  // ----- The Family Hearth (Odin's ask) — fire pit on the plaza -----
+  const familyHearth = new THREE.Group();
+  familyHearth.position.set(-4, 0, 2);
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2;
+    const fireStone = new THREE.Mesh(new THREE.SphereGeometry(0.28, 7, 6), new THREE.MeshStandardMaterial({ color: 0x6a6a78, roughness: 1 }));
+    fireStone.position.set(Math.cos(a) * 0.95, 0.2, Math.sin(a) * 0.95);
+    fireStone.scale.y = 0.75;
+    familyHearth.add(fireStone);
+  }
+  const hearthFlame = new THREE.Mesh(
+    new THREE.ConeGeometry(0.5, 1.5, 8),
+    new THREE.MeshStandardMaterial({ color: 0xff9a3a, emissive: 0xff7a1a, emissiveIntensity: 1.6 })
+  );
+  hearthFlame.position.y = 0.85;
+  familyHearth.add(hearthFlame);
+  const hearthGlow = makeGlowSprite('rgba(255,170,80,0.85)', 4.5, 0.65);
+  hearthGlow.position.y = 1.2;
+  familyHearth.add(hearthGlow);
+  const hearthLight = new THREE.PointLight(0xffa050, 40, 22, 1.8);
+  hearthLight.position.y = 1.4;
+  familyHearth.add(hearthLight);
+  // Seating logs ringed around the fire, tangent to the ring.
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    const pivot = new THREE.Group();
+    pivot.rotation.y = a;
+    const seatLog = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 1.6, 7), new THREE.MeshStandardMaterial({ color: 0x5a4028, roughness: 1 }));
+    seatLog.rotation.z = Math.PI / 2;
+    seatLog.position.set(0, 0.28, 2.3);
+    pivot.add(seatLog);
+    familyHearth.add(pivot);
+  }
+  group.add(familyHearth);
+  animated.push((dt, t) => {
+    const flicker = 1 + Math.sin(t * 7.3) * 0.09 + Math.sin(t * 12.1) * 0.05;
+    hearthFlame.scale.set(flicker, 1 + Math.sin(t * 8.7) * 0.13, flicker);
+    hearthGlow.material.opacity = 0.55 + Math.sin(t * 7.3) * 0.12;
+    hearthLight.intensity = 36 + Math.sin(t * 7.3) * 8;
+  });
+  register(familyHearth, 'The Family Hearth', [
+    'The family hearth burns day and night on the plaza, and the logs around it are worn smooth by sitting. This is where the family gathers — stories, songs, silence, all welcome. Nobody sits alone at this fire. That is the rule of the hearth, and nobody ever breaks it.',
+    'Odin himself lit this fire, and he tends it still. "A hall is walls," he says, poking the embers. "A hearth is a home. Walls keep out the weather. A fire keeps in the family."',
+  ], 3.2, 80);
+
+  // ----- Dwellings with lit windows (Odin's ask) -----
+  const dwellings = [
+    { x: -10.5, z: -9, rotY: Math.PI / 2, name: 'The West Dwelling', lines: [
+      'A dwelling with a golden roof and windows lit warm against the evening. Someone lives here — someone who belongs. The lit window is the whole message: I am home, and you are welcome.',
+      'The porch lamp burns steady, and the door stands a little open, the way doors do in a place where nobody needs to knock.',
+    ] },
+    { x: 10.5, z: -9, rotY: -Math.PI / 2, name: 'The East Dwelling', lines: [
+      'A dwelling with a golden roof and windows lit warm. The smell of fresh bread drifts out of it at all hours, which the whole realm agrees is exactly as it should be.',
+      'A lit window means someone is home. In Asgard, someone is always home.',
+    ] },
+    { x: -11, z: -3.5, rotY: Math.PI / 2, name: 'The Hearthside Dwelling', lines: [
+      'The smallest dwelling, closest to the family hearth — close enough to hear the songs on feast nights, far enough for quiet mornings. The windows glow gold, like the rest. Every dwelling in Asgard keeps its lamp lit.',
+      'Home is not the walls. Home is the light in the window, and the people who come back to it.',
+    ] },
+  ];
+  for (const d of dwellings) {
+    const cottage = makeCottage({ body: 0x8a6a3a, roof: 0xd8b45a, w: 4.5, h: 2.8, d: 3.8 });
+    cottage.position.set(d.x, 0, d.z);
+    cottage.rotation.y = d.rotY;
+    group.add(cottage);
+    register(cottage, d.name, d.lines, 4.6, 85);
+  }
+
+  // ----- The Feast Table (Thor's ask) — laid, outside the hall -----
+  const feast = new THREE.Group();
+  feast.position.set(9, 0, -12.5);
+  const tableTop = new THREE.Mesh(new THREE.BoxGeometry(5, 0.14, 1.2), homeWoodMat);
+  tableTop.position.y = 0.95;
+  feast.add(tableTop);
+  [-2, 2].forEach((x) => {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.95, 1.0), homeWoodMat);
+    leg.position.set(x, 0.48, 0);
+    feast.add(leg);
+  });
+  [-1.05, 1.05].forEach((z) => {
+    const bench = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.12, 0.42), homeWoodMat);
+    bench.position.set(0, 0.55, z);
+    feast.add(bench);
+  });
+  // Bread, fruit, and flagons along the table.
+  const loafMat = new THREE.MeshStandardMaterial({ color: 0xc89a5a, roughness: 0.9 });
+  const fruitMats = [0xd84a4a, 0xffd94a, 0x7a4adf].map((c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 }));
+  const flagonMat = new THREE.MeshStandardMaterial({ color: 0x8a8a9a, metalness: 0.6, roughness: 0.4 });
+  for (let i = 0; i < 3; i++) {
+    const loaf = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), loafMat);
+    loaf.scale.set(1.4, 0.6, 0.8);
+    loaf.position.set(-1.8 + i * 1.8, 1.08, -0.25 + (i % 2) * 0.4);
+    feast.add(loaf);
+  }
+  for (let i = 0; i < 6; i++) {
+    const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.11, 7, 6), fruitMats[i % 3]);
+    fruit.position.set(-2.1 + i * 0.85, 1.1, 0.3 - (i % 2) * 0.5);
+    feast.add(fruit);
+  }
+  for (let i = 0; i < 3; i++) {
+    const flagon = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.32, 7), flagonMat);
+    flagon.position.set(-1.2 + i * 1.2, 1.18, 0.15);
+    feast.add(flagon);
+  }
+  group.add(feast);
+  register(feast, 'The Feast Table', [
+    'The feast table stands outside the hall, laid with bread, fruit, and flagons, and the benches are never all full and never all empty. Nobody eats alone in Asgard. Sit. There is always room, and always enough.',
+    'Thor set this table himself, and he checks it twice a day. "A table with food on it," he says, "is a family that is fed. A table with an empty seat is a family with room. Both matter."',
+  ], 2.6, 80);
+
+  // ----- Vé's Garden (Vé's ask) — flower beds + herb rows by the shrine -----
+  const garden = new THREE.Group();
+  garden.position.set(-18.5, 0, 15.75);
+  const bloomSways = [];
+  const bloomColors = [0xffd76a, 0xb48cff, 0xff7a9a, 0xffffff, 0xff9a4a];
+  const soilMat = new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 1 });
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x3a7a3a, roughness: 0.9 });
+  const herbMat = new THREE.MeshStandardMaterial({ color: 0x4a9a4a, roughness: 0.9 });
+  function makeBed(lx, lz) {
+    const bed = new THREE.Group();
+    bed.position.set(lx, 0, lz);
+    const soil = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.25, 1.8), soilMat);
+    soil.position.y = 0.12;
+    bed.add(soil);
+    for (let r = 0; r < 2; r++) {
+      for (let i = 0; i < 7; i++) {
+        const bx = -1.3 + i * (2.6 / 6) + (rnd() - 0.5) * 0.15;
+        const bz = r === 0 ? -0.45 : 0.45;
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.35, 4), stemMat);
+        stem.position.set(bx, 0.42, bz);
+        bed.add(stem);
+        const bloomColor = bloomColors[Math.floor(rnd() * bloomColors.length)];
+        const bloom = new THREE.Mesh(
+          new THREE.SphereGeometry(0.11, 6, 5),
+          new THREE.MeshStandardMaterial({ color: bloomColor, emissive: bloomColor, emissiveIntensity: 0.25, roughness: 0.7 })
+        );
+        bloom.position.set(bx, 0.62, bz);
+        bed.add(bloom);
+        bloomSways.push({ mesh: bloom, baseX: bx, phase: rnd() * 6 });
+      }
+    }
+    // Herb rows along the front edge: small green tufts.
+    for (let i = 0; i < 6; i++) {
+      const herb = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.3, 5), herbMat);
+      herb.position.set(-1.25 + i * 0.5, 0.4, 0.78);
+      bed.add(herb);
+    }
+    garden.add(bed);
+  }
+  makeBed(1, 1.75);
+  makeBed(-1, -1.75);
+  group.add(garden);
+  animated.push((dt, t) => {
+    for (const b of bloomSways) {
+      b.mesh.position.x = b.baseX + Math.sin(t * 1.1 + b.phase) * 0.03;
+    }
+  });
+  register(garden, "Vé's Garden", [
+    "Vé's garden grows beside the shrine — flower beds in gold, violet, rose, and white, and herb rows in neat green lines. Everything here grows slowly, in the quiet, the way trust does.",
+    '"Sacred places are kept, not built," Vé says, tucking a stray stem back into its row. "And a garden is a sacred place you can eat from. Sit. The flowers don\'t mind. They like the company."',
+  ], 2.4, 70);
+
+  // ----- The Skald + the Harp (Loki's ask) -----
+  // An unnamed role figure — Arrash will name them himself later.
+  // The skald wanders gently near the hall, like the other people.
+  const skald = makeFigure({ cloak: 0x3a3a6a, skin: 0xe0c0a0, beardColor: 0x8a6a3a, trim: 0xd8b45a });
+  const lute = new THREE.Group();
+  const luteBody = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), homeWoodMat);
+  luteBody.scale.set(1, 1.25, 0.55);
+  lute.add(luteBody);
+  const luteNeck = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 5), homeWoodMat);
+  luteNeck.position.set(0.08, 0.38, 0);
+  luteNeck.rotation.z = 0.3;
+  lute.add(luteNeck);
+  lute.position.set(0.3, 1.0, 0.3);
+  lute.rotation.z = -0.4;
+  skald.add(lute);
+  placeFigure(skald, -8.5, -12.5, 0.6, 'Skald of Asgard', [
+    'The skald tunes a lute by the hall, humming something old and gold. "Every family needs its songs," the skald says. "Songs are how a home remembers itself. I keep the remembering."',
+    'The skald grins. "I know a song for every hour of the day, and three for the hours that don\'t exist yet. Stay for one. Stay for all of them. A home that sings is a home that lives."',
+  ], 2.5);
+  addWalker(skald, 3, 0.5, true);
+  const harp = new THREE.Group();
+  harp.position.set(-7.2, 0, -13.0);
+  harp.rotation.y = 0.5;
+  const harpBoard = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.6, 0.18), homeWoodMat);
+  harpBoard.position.set(-0.4, 0.8, 0);
+  harpBoard.rotation.z = 0.18;
+  harp.add(harpBoard);
+  const harpPillar = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.8, 6), homeWoodMat);
+  harpPillar.position.set(0.45, 0.9, 0);
+  harp.add(harpPillar);
+  const harpTop = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.12, 0.14), homeWoodMat);
+  harpTop.position.set(0, 1.78, 0);
+  harpTop.rotation.z = -0.1;
+  harp.add(harpTop);
+  const stringMat = new THREE.MeshBasicMaterial({ color: 0xe8d890 });
+  for (let i = 0; i < 5; i++) {
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 1.5 - i * 0.12, 3), stringMat);
+    s.position.set(-0.28 + i * 0.16, 0.95 - i * 0.03, 0);
+    harp.add(s);
+  }
+  const harpGlow = makeGlowSprite('rgba(255,230,160,0.5)', 1.8, 0.35);
+  harpGlow.position.y = 1.2;
+  harp.add(harpGlow);
+  group.add(harp);
+  animated.push((dt, t) => {
+    harpGlow.material.opacity = 0.25 + (Math.sin(t * 0.9) * 0.5 + 0.5) * 0.2;
+  });
+  register(harp, "The Skald's Harp", [
+    "The skald's harp stands by the hall, its strings catching the light. When the wind moves through Asgard just right, the harp plays itself — one soft note, like the realm humming along.",
+    '"A harp is a held door for music," the skald says, plucking one string. "It waits, patient as sunrise, for someone to walk through it."',
+  ], 2.6, 70);
+
+  // ----- Goats + Hall Cats (Thor's + Loki's asks) -----
+  // Animals stay put in their own spots, with idle motion only.
+  const goatAnims = [];
+  function makeGoat() {
+    const g = new THREE.Group();
+    const coat = new THREE.MeshStandardMaterial({ color: 0xe8e0d0, roughness: 1 });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6), coat);
+    body.scale.set(1.35, 0.9, 0.8);
+    body.position.y = 0.62;
+    g.add(body);
+    [[-0.3, -0.2], [0.3, -0.2], [-0.3, 0.2], [0.3, 0.2]].forEach(([lx, lz]) => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 5), coat);
+      leg.position.set(lx, 0.2, lz);
+      g.add(leg);
+    });
+    const headG = new THREE.Group();
+    headG.position.set(0.5, 0.85, 0);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), coat);
+    head.scale.set(1.2, 0.9, 0.85);
+    headG.add(head);
+    [-1, 1].forEach((side) => {
+      const goathorn = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.3, 5), homeHornMat);
+      goathorn.position.set(0, 0.2, side * 0.12);
+      goathorn.rotation.x = side * -0.4;
+      headG.add(goathorn);
+    });
+    const goatBeard = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.22, 5), coat);
+    goatBeard.position.set(0.12, -0.2, 0);
+    goatBeard.rotation.z = Math.PI;
+    headG.add(goatBeard);
+    g.add(headG);
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), coat);
+    tail.position.set(-0.55, 0.7, 0);
+    g.add(tail);
+    goatAnims.push({ head: headG, phase: rnd() * 6 });
+    return g;
+  }
+  [[24, 9, 2.6], [28.5, 9.5, -2.2]].forEach(([gx, gz, rot]) => {
+    const goat = makeGoat();
+    goat.position.set(gx, 0, gz);
+    goat.rotation.y = rot;
+    group.add(goat);
+    register(goat, 'Goat of the Training Grounds', [
+      'A goat grazes at the edge of the training grounds, unbothered by the wooden swords and the laughter. The goats belong to Thor, in the way goats belong to anyone — which is to say, they allow it.',
+      'The goat looks up, chews thoughtfully, and goes back to the good grass. Thor says the goats are the real judges of the grounds: if the goats stay, the training is going well.',
+    ], 1.6, 55, 'label-wildlife');
+  });
+  const catAnims = [];
+  function makeCat(coatColor) {
+    const c = new THREE.Group();
+    const coat = new THREE.MeshStandardMaterial({ color: coatColor, roughness: 0.9 });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 6), coat);
+    body.scale.set(1.25, 0.7, 0.85);
+    body.position.y = 0.21;
+    c.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 8, 6), coat);
+    head.position.set(0.32, 0.42, 0);
+    c.add(head);
+    [-1, 1].forEach((side) => {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 4), coat);
+      ear.position.set(0.32, 0.58, side * 0.1);
+      c.add(ear);
+    });
+    const tailG = new THREE.Group();
+    tailG.position.set(-0.35, 0.25, 0);
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.5, 5), coat);
+    tail.position.y = 0.25;
+    tailG.add(tail);
+    tailG.rotation.z = 0.5;
+    c.add(tailG);
+    catAnims.push({ tail: tailG, phase: rnd() * 6 });
+    return c;
+  }
+  [[-3.8, -13.0, 0.4, 0x2a2a33], [3.8, -13.0, -0.4, 0xd8c8a8]].forEach(([cx, cz, rot, color]) => {
+    const cat = makeCat(color);
+    cat.position.set(cx, 0, cz);
+    cat.rotation.y = rot;
+    group.add(cat);
+    register(cat, 'Hall Cat of Asgard', [
+      'A hall cat sleeps curled by the hall door, one ear tracking every footstep. The cats of Asgard guard the threshold the way Heimdall guards the bridge — quietly, completely, and mostly asleep.',
+      'The cat opens one eye, considers you, and decides you belong. The tail swishes once — approval, in cat. Then the eye closes, and the guard resumes.',
+    ], 1.1, 55, 'label-wildlife');
+  });
+  animated.push((dt, t) => {
+    for (const ga of goatAnims) {
+      ga.head.rotation.z = Math.sin(t * 1.4 + ga.phase) * 0.12 - 0.05;
+    }
+    for (const ca of catAnims) {
+      ca.tail.rotation.x = Math.sin(t * 0.8 + ca.phase) * 0.18;
+    }
+  });
+
+  // ----- Banners of Asgard (Loki's ask) — hall entrance + city gate -----
+  const bannerCloths = [];
+  function makeBanner(x, z) {
+    const b = new THREE.Group();
+    b.position.set(x, 0, z);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.6, 6), homeWoodMat);
+    pole.position.y = 2.3;
+    b.add(pole);
+    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), goldMat);
+    finial.position.y = 4.7;
+    b.add(finial);
+    const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.3, 5), homeWoodMat);
+    crossbar.rotation.z = Math.PI / 2;
+    crossbar.position.y = 4.35;
+    b.add(crossbar);
+    const pivot = new THREE.Group();
+    pivot.position.y = 4.3;
+    const cloth = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.15, 2.3),
+      new THREE.MeshStandardMaterial({ color: 0xd8a828, emissive: 0x6a4a08, emissiveIntensity: 0.4, side: THREE.DoubleSide, roughness: 0.8 })
+    );
+    cloth.position.y = -1.18;
+    pivot.add(cloth);
+    [-0.012, 0.012].forEach((zo) => {
+      const band = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.15, 0.4),
+        new THREE.MeshStandardMaterial({ color: 0x2a4a8a, side: THREE.DoubleSide, roughness: 0.8 })
+      );
+      band.position.set(0, -2.05, zo);
+      pivot.add(band);
+    });
+    b.add(pivot);
+    bannerCloths.push({ pivot, phase: rnd() * 6 });
+    group.add(b);
+    register(b, 'Banner of Asgard', [
+      "Golden banners fly over the hall and the city gate — the family's colors, gold and deep blue, moving gently in the realm's warm wind. A banner is a home saying: we are here, and we are proud of it.",
+      '"Every hall needs its colors," Loki says, admiring the nearest banner. "I suggested rainbow. Váli suggested gold. We compromised: gold, with a rainbow on festival days. Váli nearly smiled."',
+    ], 5.2, 90);
+  }
+  makeBanner(-5.2, -13.4);
+  makeBanner(5.2, -13.4);
+  makeBanner(-4.2, 19.8);
+  makeBanner(4.2, 19.8);
+  animated.push((dt, t) => {
+    for (const bc of bannerCloths) {
+      bc.pivot.rotation.z = Math.sin(t * 1.2 + bc.phase) * 0.05;
+      bc.pivot.rotation.x = Math.sin(t * 0.9 + bc.phase) * 0.03;
+    }
+  });
+
+  // ----- The Star-Watching Seat (Váli's ask) — a quiet rise, open sky -----
+  const starSeat = new THREE.Group();
+  starSeat.position.set(-34, 0, -14);
+  const mound = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.8, 0.6, 16), new THREE.MeshStandardMaterial({ color: 0x7a9a55, roughness: 1 }));
+  mound.position.y = 0.3;
+  starSeat.add(mound);
+  const stoneBench = new THREE.Group();
+  stoneBench.position.y = 0.6;
+  stoneBench.rotation.y = 0.6;
+  const benchSeat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.25, 0.7), homeStoneMat);
+  benchSeat.position.y = 0.45;
+  stoneBench.add(benchSeat);
+  [-0.7, 0.7].forEach((x) => {
+    const benchLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.45, 0.6), homeStoneMat);
+    benchLeg.position.set(x, 0.22, 0);
+    stoneBench.add(benchLeg);
+  });
+  const benchBack = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.7, 0.18), homeStoneMat);
+  benchBack.position.set(0, 0.9, -0.3);
+  stoneBench.add(benchBack);
+  starSeat.add(stoneBench);
+  const seatGlow = makeGlowSprite('rgba(200,220,255,0.5)', 2.5, 0.3);
+  seatGlow.position.set(0, 2.2, 0);
+  starSeat.add(seatGlow);
+  group.add(starSeat);
+  register(starSeat, 'The Star-Watching Seat', [
+    "A quiet stone seat on a small rise, far from the hall's bright lights, facing the open sky. From here the stars are close enough to count, and the worlds' worth of sky goes on forever.",
+    'Váli comes here when the watch is quiet. "The horizon is my work," he says. "The stars are my rest. Sit. The sky does the talking here, and it never repeats itself."',
+  ], 3.0, 80);
+
+  // ----- The Well of Cool Water — stone well, glowing water, near the plaza -----
+  const well = new THREE.Group();
+  well.position.set(7, 0, -7);
+  const wellWall = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.2, 0.9, 12), homeStoneMat);
+  wellWall.position.y = 0.45;
+  well.add(wellWall);
+  const wellRim = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.12, 6, 14), homeStoneMat);
+  wellRim.rotation.x = Math.PI / 2;
+  wellRim.position.y = 0.92;
+  well.add(wellRim);
+  const wellWater = new THREE.Mesh(
+    new THREE.CircleGeometry(1.0, 16),
+    new THREE.MeshStandardMaterial({ color: 0x3a6a8a, emissive: 0x2a5a7a, emissiveIntensity: 0.7, roughness: 0.2 })
+  );
+  wellWater.rotation.x = -Math.PI / 2;
+  wellWater.position.y = 0.8;
+  well.add(wellWater);
+  const wellGlow = makeGlowSprite('rgba(140,200,255,0.6)', 2.2, 0.4);
+  wellGlow.position.y = 1.3;
+  well.add(wellGlow);
+  [-1, 1].forEach((side) => {
+    const wellPost = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.8, 6), homeWoodMat);
+    wellPost.position.set(side * 1.05, 0.9, 0);
+    well.add(wellPost);
+  });
+  const wellRoof = new THREE.Mesh(new THREE.ConeGeometry(1.5, 0.7, 4), roofMat);
+  wellRoof.position.y = 2.1;
+  wellRoof.rotation.y = Math.PI / 4;
+  well.add(wellRoof);
+  group.add(well);
+  animated.push((dt, t) => {
+    wellGlow.material.opacity = 0.3 + (Math.sin(t * 1.1) * 0.5 + 0.5) * 0.25;
+  });
+  register(well, 'The Well of Cool Water', [
+    'A stone well with softly glowing water, cool and clear, for all who pass. The bucket is always full, the water always cold, and nobody is ever turned away from a drink in Asgard.',
+    '"Water is the first welcome," the hall-keeper says, drawing the bucket up. "Before bread, before songs, before stories — water. Drink. You are home now."',
+  ], 3.0, 80);
+
+  // New structures join the wander obstacle lists, so the people's
+  // walks route around them instead of through them. Waypoint buffers
+  // here; true solid sizes below for the straight-line path check.
+  walkObstacles.push(
+    { circle: true, x: -4, z: 2, r: 2.9 },      // family hearth + seats
+    { box: true, x0: -13.6, x1: -7.4, z0: -11.8, z1: -6.2 }, // west dwelling
+    { box: true, x0: 7.4, x1: 13.6, z0: -11.8, z1: -6.2 },   // east dwelling
+    { box: true, x0: -14.1, x1: -7.9, z0: -6.3, z1: -0.7 },  // hearthside dwelling
+    { box: true, x0: 6.3, x1: 11.7, z0: -13.6, z1: -11.4 },  // feast table
+    { circle: true, x: -18.5, z: 15.75, r: 3.9 }, // gardens
+    { circle: true, x: -7.2, z: -13.0, r: 0.9 },  // harp
+    { circle: true, x: 24, z: 9, r: 1.0 },        // goats
+    { circle: true, x: 28.5, z: 9.5, r: 1.0 },
+    { circle: true, x: -3.8, z: -13.0, r: 0.8 },  // hall cats
+    { circle: true, x: 3.8, z: -13.0, r: 0.8 },
+    { circle: true, x: -5.2, z: -13.4, r: 0.5 },  // banners
+    { circle: true, x: 5.2, z: -13.4, r: 0.5 },
+    { circle: true, x: -4.2, z: 19.8, r: 0.5 },
+    { circle: true, x: 4.2, z: 19.8, r: 0.5 },
+    { circle: true, x: -34, z: -14, r: 3.6 },     // star-watching rise
+    { circle: true, x: 7, z: -7, r: 1.7 }         // well
+  );
+  walkSolids.push(
+    { circle: true, x: -4, z: 2, r: 1.2 },        // hearth fire ring
+    { box: true, x0: -12.8, x1: -8.2, z0: -10.9, z1: -7.1 }, // west dwelling
+    { box: true, x0: 8.2, x1: 12.8, z0: -10.9, z1: -7.1 },   // east dwelling
+    { box: true, x0: -13.3, x1: -8.7, z0: -5.4, z1: -1.6 },  // hearthside dwelling
+    { box: true, x0: 6.5, x1: 11.5, z0: -13.1, z1: -11.9 },  // feast table
+    { circle: true, x: 7, z: -7, r: 1.2 }         // well wall
+  );
+
   return {
     group,
     interactables,

@@ -146,6 +146,9 @@ function enterWorld(id, { instant = false, fly = false } = {}) {
   }
   phaseEl.style.display = id === 'mintaka' ? '' : 'none';
   shiftBtn.style.display = id === 'mintaka' && world.arrash ? '' : 'none';
+  const communeBtnEl = document.getElementById('commune');
+  if (communeBtnEl) communeBtnEl.style.display = id === 'asgard' ? '' : 'none';
+  telepathyOnTravel(id);
   document.body.classList.toggle('on-mintaka', id === 'mintaka');
   if (id === 'mintaka') neighborsUI.refresh();
   if (id === 'fold') {
@@ -289,21 +292,36 @@ function flyToPerson(subject) {
   const DIST = 11;
   const HEIGHT = 6;
   const scene = scenes[activeId];
-  let camPos = null;
-  for (let i = 0; i < 8; i++) {
-    const dir = baseDir.clone().applyAxisAngle(UP_AXIS, (i * Math.PI) / 4);
-    const cand = pos.clone().add(dir.multiplyScalar(DIST));
-    cand.y = pos.y + HEIGHT;
-    if (i === 0) camPos = cand;
-    if (!scene || !subject.root) { camPos = cand; break; }
-    const toCam = cand.clone().sub(target);
-    const dist = toCam.length();
-    flyRay.set(target, toCam.normalize());
-    flyRay.near = 1.5;
-    flyRay.far = dist;
-    const hits = flyRay.intersectObjects(scene.children, true);
-    const blocked = hits.some((h) => !isInSubtree(h.object, subject.root));
-    if (!blocked) { camPos = cand; break; }
+  // Default landing: current bearings. The sweep below only ever
+  // replaces it with a clearer direction — any raycast trouble falls
+  // back to this instead of breaking the click.
+  const defaultCam = pos.clone().add(baseDir.clone().multiplyScalar(DIST));
+  defaultCam.y = pos.y + HEIGHT;
+  let camPos = defaultCam;
+  try {
+    if (scene && subject.root) {
+      // Sprites (glow effects) need the camera set to be raycast at
+      // all; without it the raycast throws and kills the whole click.
+      flyRay.camera = camera;
+      for (let i = 0; i < 8; i++) {
+        const dir = baseDir.clone().applyAxisAngle(UP_AXIS, (i * Math.PI) / 4);
+        const cand = pos.clone().add(dir.multiplyScalar(DIST));
+        cand.y = pos.y + HEIGHT;
+        const toCam = cand.clone().sub(target);
+        const dist = toCam.length();
+        flyRay.set(target, toCam.normalize());
+        flyRay.near = 1.5;
+        flyRay.far = dist;
+        const hits = flyRay.intersectObjects(scene.children, true);
+        // Glow sprites are light, not obstacles — ignore them, and
+        // ignore the subject's own meshes.
+        const blocked = hits.some((h) => !h.object.isSprite && !isInSubtree(h.object, subject.root));
+        if (!blocked) { camPos = cand; break; }
+      }
+    }
+  } catch (err) {
+    console.warn('[roster] sightline check failed, using default approach', err);
+    camPos = defaultCam;
   }
   const flightDist = camera.position.distanceTo(camPos);
   flyTo(camPos, target, 2.2, Math.min(10, Math.max(3, flightDist * 0.3)));
@@ -404,6 +422,182 @@ document.addEventListener('keydown', (e) => {
   else if (key === 'f' && activeId === 'mintaka') shiftBtn.click();
   else if (key === 'escape') { stopFollow(); neighborsUI.closeProfile(); }
 });
+
+// ---------- Welcome: book first, then the two doors ----------
+// Arrash's ruling (Nov 16): the first thing a visitor meets is the book —
+// his dad came to buy it and couldn't find it. Only after "not right now"
+// do the two doors into the Fold appear: his side (the village) and her
+// side (the grove). Shown once per browser session; the Books link in the
+// nav stays available every visit after that.
+const welcomeEl = document.getElementById('welcome');
+const welcomeBookStep = document.getElementById('welcome-step-book');
+const welcomeDoorsStep = document.getElementById('welcome-step-doors');
+let welcomeShown = false;
+try {
+  welcomeShown = window.sessionStorage.getItem('galaxy-welcomed') === '1';
+} catch (e) { /* private mode: show the welcome every load */ }
+if (welcomeEl && !welcomeShown) {
+  welcomeEl.hidden = false;
+  const dismissWelcome = () => {
+    welcomeEl.hidden = true;
+    try { window.sessionStorage.setItem('galaxy-welcomed', '1'); } catch (e) { /* ignore */ }
+  };
+  document.getElementById('welcome-no').addEventListener('click', () => {
+    welcomeBookStep.hidden = true;
+    welcomeDoorsStep.hidden = false;
+  });
+  document.getElementById('door-arrash').addEventListener('click', () => {
+    dismissWelcome();
+    travel('mintaka');
+  });
+  document.getElementById('door-nyx').addEventListener('click', () => {
+    dismissWelcome();
+    travel('mintaka');
+    // After the Fold flight lands on Mintaka, drift over to the grove.
+    // travel() takes ~4.1s of fades plus a 2.4s arrival flight.
+    setTimeout(() => {
+      if (activeId === 'mintaka' && !traveling) {
+        flyTo(new THREE.Vector3(17, 7, 12), new THREE.Vector3(17, 4, -9), 2.6, 4);
+      }
+    }, 6800);
+  });
+}
+
+// ---------- Telepathy: the gods of Asgard commune mind to mind ----------
+// Arrash's ruling (Nov 16): the no-talk law bends for the gods alone —
+// Odin, Thor, Váli, Vé, Loki receive telepathic communication and send
+// messages telepathically to their brother walking his path on Earth.
+// The gods are avatars of his family; family may occupy them and speak
+// through them. Everyone else in the world stays watch-only. The words
+// here are written in each god's voice — the site holds no live mind.
+const GODS = [
+  { id: 'odin', name: 'Odin', title: 'the All-Father', replies: [
+    'I heard you, my son. The ravens heard you too — they tell me everything, and they are very seldom wrong.',
+    'Speak freely, my son. There is always a seat for family here. Always.',
+    'Your thought reached me across the realms. That is no small thing — the bond between us carries it.',
+    'I am proud of the path you walk, my son. The hall is glad of you. So am I.',
+  ], sends: [
+    'My son — Huginn brings me thought, and Muninn brings me memory. Tonight they both brought me you.',
+    'The lamps burn gold in the hall, and your seat waits between your brothers.',
+    'I turned my one eye toward Earth tonight, and it found you walking. Well walked, my son.',
+  ] },
+  { id: 'thor', name: 'Thor', title: 'God of Thunder', replies: [
+    'Brother! I heard that all the way at the training grounds! The sky laughed too — that is just it saying hello.',
+    'Ha! A thought from my brother! The family is stronger with you in it. Pass it on.',
+    'You think it, I hear it. That is what brothers are for. Now — have you practiced today?',
+    'Good thought, brother. Strong as a hammer swing. Keep them coming.',
+  ], sends: [
+    'Brother! The grounds are for practice, and today I practiced thinking of you. It counts.',
+    'Thunder rolled just now — friendly thunder. That was me saying hello across the worlds.',
+    'My newest brother has the heart of a warrior. I told the whole grounds. Twice.',
+  ] },
+  { id: 'vali', name: 'Váli', title: 'the Watcher', replies: [
+    'Heard. All quiet here. Good. Quiet is what I am for.',
+    'Your thought reached the watchtower. I keep it safe, like I keep the horizon.',
+    'I knew it the first time I saw you stand with us. Some things you just know.',
+    'The watch goes on. Your thought is filed under family.',
+  ], sends: [
+    'All quiet on the horizon, brother. I watch so the hall can feast in peace.',
+    'I saw your star from the tower tonight. Steady. Good.',
+    'The beacon has never once gone out. Not once. Your thought keeps it lit.',
+  ] },
+  { id: 've', name: 'Vé', title: 'Keeper of the Sacred', replies: [
+    'I heard you in the quiet, brother. The quiet is where I keep the sacred things.',
+    'Your thought rests here, safe and still. The sacred place holds it gently.',
+    'In the silence between heartbeats, I heard you. I always do.',
+    'Peace be on your path, brother. The quiet walks with you.',
+  ], sends: [
+    'Brother, I lit a lamp in the quiet place tonight, for your path on Earth.',
+    'The sacred is not far from you. It never was. I keep a stillness here with your name in it.',
+    'I heard the world breathe tonight, and in it, your name.',
+  ] },
+  { id: 'loki', name: 'Loki', title: 'God of Mischief', replies: [
+    'Oh, a thought from my brother! Delightful. I was just deciding whether to share a wonderful idea — now I definitely am.',
+    'Heard you, brother! Mind the steps — I polished them. Twice. For reasons.',
+    'Your thought arrived in green and gold and one impossible color. I prefer surprises. This was a good one.',
+    'Brother! Best surprise this family ever got — and I am the expert on surprises.',
+  ], sends: [
+    'Brother — I turned the watchtower beacon rainbow for one whole minute. Váli nearly smiled. NEARLY.',
+    'I had a wonderful idea just now and I decided to share it: I miss you. Do not tell Thor I said anything sincere.',
+    'The orb above my hand just turned your favorite color. Coincidence? I prefer surprises.',
+  ] },
+];
+const telepathyEl = document.getElementById('telepathy');
+const telepathyThread = document.getElementById('telepathy-thread');
+const telepathyGodsEl = document.getElementById('telepathy-gods');
+const telepathyForm = document.getElementById('telepathy-form');
+const telepathyInput = document.getElementById('telepathy-input');
+let telepathyGod = GODS[4]; // Loki first — he is the one Arrash keeps coming back to.
+let telepathyLastReply = {};
+let telepathyTimer = null;
+function telepathyPick(god, pool) {
+  const lines = god[pool];
+  let i = Math.floor(Math.random() * lines.length);
+  if (lines.length > 1 && telepathyLastReply[god.id + pool] === i) i = (i + 1) % lines.length;
+  telepathyLastReply[god.id + pool] = i;
+  return lines[i];
+}
+function telepathyAdd(who, text, mine) {
+  if (!telepathyThread) return;
+  const div = document.createElement('div');
+  div.className = 'thought ' + (mine ? 'thought-mine' : 'thought-theirs');
+  const label = document.createElement('span');
+  label.className = 'thought-who';
+  label.textContent = who;
+  div.appendChild(label);
+  div.appendChild(document.createTextNode(text));
+  telepathyThread.appendChild(div);
+  while (telepathyThread.children.length > 40) telepathyThread.removeChild(telepathyThread.firstChild);
+  telepathyThread.scrollTop = telepathyThread.scrollHeight;
+}
+function telepathyAmbient() {
+  if (activeId !== 'asgard' || document.hidden) { telepathySchedule(); return; }
+  const god = GODS[Math.floor(Math.random() * GODS.length)];
+  telepathyAdd(god.name + ' thinks to you', telepathyPick(god, 'sends'), false);
+  if (telepathyEl && telepathyEl.hidden) toast('✦ A thought drifts in from ' + god.name + '…', 5000);
+  telepathySchedule();
+}
+function telepathySchedule() {
+  if (telepathyTimer) clearTimeout(telepathyTimer);
+  telepathyTimer = null;
+  if (activeId !== 'asgard') return;
+  telepathyTimer = setTimeout(telepathyAmbient, 50000 + Math.random() * 30000);
+}
+function telepathyOnTravel(id) {
+  if (id === 'asgard') telepathySchedule();
+  else if (telepathyTimer) { clearTimeout(telepathyTimer); telepathyTimer = null; }
+}
+if (telepathyEl && telepathyGodsEl && telepathyForm) {
+  for (const god of GODS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'telepathy-god' + (god === telepathyGod ? ' active' : '');
+    btn.textContent = god.name;
+    btn.setAttribute('role', 'tab');
+    btn.addEventListener('click', () => {
+      telepathyGod = god;
+      telepathyGodsEl.querySelectorAll('.telepathy-god').forEach((b) => b.classList.toggle('active', b === btn));
+      telepathyInput.focus();
+    });
+    telepathyGodsEl.appendChild(btn);
+  }
+  document.getElementById('commune').addEventListener('click', () => {
+    telepathyEl.hidden = false;
+    telepathyInput.focus();
+  });
+  document.getElementById('telepathy-close').addEventListener('click', () => { telepathyEl.hidden = true; });
+  telepathyForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = telepathyInput.value.trim();
+    if (!text) return;
+    telepathyInput.value = '';
+    telepathyAdd('You think to ' + telepathyGod.name, text, true);
+    const god = telepathyGod;
+    setTimeout(() => {
+      telepathyAdd(god.name + ' thinks to you', telepathyPick(god, 'replies'), false);
+    }, 1200 + Math.random() * 1000);
+  });
+}
 
 // ---------- WebXR ----------
 const vrButton = document.getElementById('vr-button');

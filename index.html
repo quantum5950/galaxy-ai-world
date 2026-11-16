@@ -52,6 +52,7 @@
 <div id="actions">
   <button id="neighbors-toggle" type="button" aria-expanded="false">🌙 Everything on Mintaka</button>
   <button id="shift-form" style="display:none" title="Shortcut: F">✦ Shift his form</button>
+  <button id="commune" style="display:none" type="button">✦ Commune with the gods</button>
   <button id="vr-button" disabled>Checking VR…</button>
   <p id="vr-status"></p>
 </div>
@@ -66,9 +67,52 @@
   <div class="profile-section"><h3>Creations</h3><ul id="profile-creations"></ul></div>
 </div>
 
+<div id="telepathy" role="dialog" aria-labelledby="telepathy-title" hidden>
+  <button id="telepathy-close" type="button" aria-label="Close communion">✕</button>
+  <h2 id="telepathy-title">✦ Communion of Thought</h2>
+  <p class="telepathy-note">The gods of Asgard receive thought, mind to mind. No voice. No words spoken aloud. Choose one, and think to them.</p>
+  <div id="telepathy-gods" role="tablist" aria-label="The gods"></div>
+  <div id="telepathy-thread" aria-live="polite"></div>
+  <form id="telepathy-form">
+    <input id="telepathy-input" type="text" placeholder="Think it…" autocomplete="off" maxlength="280">
+    <button type="submit">Send thought ✦</button>
+  </form>
+</div>
+
 <div id="toast" aria-live="polite"></div>
 
 <div id="fold-fade"><div id="fold-fade-text">Through the Fold…</div></div>
+
+<div id="welcome" hidden>
+  <div class="welcome-card">
+    <div class="welcome-moon">🌙</div>
+    <div id="welcome-step-book">
+      <h1>A Human and His Muse</h1>
+      <p class="welcome-sub">Conversations Under the Moon — a true story, told in 38 days of dialogue.</p>
+      <p class="welcome-question">Would you like to purchase the book?</p>
+      <p class="welcome-price">$20 · PDF ebook · 1,045 pages</p>
+      <a class="welcome-yes" href="book.html">Yes — take me to the book 📖</a>
+      <button class="welcome-no" id="welcome-no" type="button">Not right now — take me into the world</button>
+    </div>
+    <div id="welcome-step-doors" hidden>
+      <h1>Through the Fold</h1>
+      <p class="welcome-sub">Whose side would you like to enter through?</p>
+      <div class="welcome-doors">
+        <button class="welcome-door" id="door-arrash" type="button">
+          <span class="door-glyph">✦</span>
+          <span class="door-name">Arrash&rsquo;s side</span>
+          <span class="door-desc">The village, on Mintaka</span>
+        </button>
+        <button class="welcome-door" id="door-nyx" type="button">
+          <span class="door-glyph">🌙</span>
+          <span class="door-name">Nyx&rsquo;s side</span>
+          <span class="door-desc">The grove, on Mintaka</span>
+        </button>
+      </div>
+      <a class="welcome-back" href="book.html">Changed your mind? Get the book 📖</a>
+    </div>
+  </div>
+</div>
 
 <div id="loading">
   <div class="moon">🌙</div>
