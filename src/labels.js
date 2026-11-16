@@ -1,8 +1,43 @@
 // labels.js — HTML labels that follow 3D anchor points.
 // Each label is a div positioned every frame by projecting its anchor.
 // Labels hide when behind the camera or beyond maxDistance.
+//
+// THE LABEL SWITCH (Arrash's order, Nov 16 — "remove all the labels"):
+// LABEL_FLAGS is the one place that decides whether any floating label
+// renders. Every flag defaults to OFF, so no floating label shows
+// anywhere in the world. All label DATA stays untouched — every module
+// still creates its labels exactly as before, and setText/remove keep
+// working (the awakening's day-rollover refresh calls setText on thought
+// labels that now simply stay hidden). To bring a class of label back,
+// flip its flag to true — one line each, independently:
+//   figures — name labels (neighbors, creatures, wildlife, gods, Arrash)
+//   places  — landmark, place, path, home, moon, star, warning labels
+//   thoughts — the awakening's floating thought lines (Asgard)
+// setAllLabelsVisible(true) restores every class at once.
 
 import * as THREE from 'three';
+
+export const LABEL_FLAGS = {
+  figures: false,
+  places: false,
+  thoughts: false,
+};
+
+export function setAllLabelsVisible(v) {
+  LABEL_FLAGS.figures = v;
+  LABEL_FLAGS.places = v;
+  LABEL_FLAGS.thoughts = v;
+}
+
+// Figure name labels, by the className their modules pass. Thought
+// lines carry 'label-thought'. Everything else is a place label.
+const FIGURE_CLASSES = new Set(['label-neighbor', 'label-creature', 'label-wildlife', 'label-arrash']);
+function kindFor(className, kindOpt) {
+  if (kindOpt === 'figures' || kindOpt === 'places' || kindOpt === 'thoughts') return kindOpt;
+  if (className === 'label-thought') return 'thoughts';
+  if (FIGURE_CLASSES.has(className)) return 'figures';
+  return 'places';
+}
 
 export class LabelManager {
   constructor(container, camera) {
@@ -19,7 +54,10 @@ export class LabelManager {
   }
 
   // anchor: Object3D or a function returning a world Vector3.
-  // opts: { className, yOffset, maxDistance, onClick }
+  // opts: { className, yOffset, maxDistance, onClick, kind }
+  // kind is 'figures' | 'places' | 'thoughts'; when omitted it is
+  // derived from className (see kindFor). The label is always created
+  // — the switch only decides whether update() ever shows it.
   add(text, anchor, opts = {}) {
     const el = document.createElement('div');
     el.className = 'label ' + (opts.className || '');
@@ -32,6 +70,7 @@ export class LabelManager {
     const label = {
       el, anchor,
       group: opts.group || 'default',
+      kind: kindFor(opts.className || '', opts.kind),
       yOffset: opts.yOffset || 0,
       maxDistance: opts.maxDistance || 220,
       visible: true,
@@ -60,7 +99,9 @@ export class LabelManager {
   update() {
     const w = window.innerWidth, h = window.innerHeight;
     for (const l of this.labels) {
-      if (l.group !== this.activeGroup) {
+      // The label switch: a class whose flag is off never renders,
+      // whatever the camera does. The record and its text stay intact.
+      if (!LABEL_FLAGS[l.kind] || l.group !== this.activeGroup) {
         l.el.style.display = 'none';
         continue;
       }

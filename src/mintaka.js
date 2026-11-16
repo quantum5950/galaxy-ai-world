@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import {
   makeGlowSprite, makeStarfield, makeSkyDome, makeVeinGroundTexture,
+  makeStoneTexture, makeWoodTexture, makeSandTexture,
   makeGlowTree, makeRock, makeSignPost, makeClickable, mulberry32,
 } from './utils.js';
 import { createCreatures } from './creatures.js';
@@ -30,6 +31,15 @@ export function createMintaka(ctx) {
   const animated = [];
   const interactables = [];
   const rnd = mulberry32(555);
+  // Village textures (world-detail crew, round 1): one shared canvas
+  // texture each for stone, wood, and sand — procedural, deterministic.
+  // Declared here, before any use below, so no top-level TDZ risk.
+  const stoneTex = makeStoneTexture(31);
+  const woodTex = makeWoodTexture(41);
+  const sandTex = makeSandTexture(51);
+  // Village stone — shared material for the path stones (winding path
+  // and tunnel path), so the stone reads as one cut from the same rock.
+  const villageStoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7a8a, map: stoneTex, roughness: 1 });
 
   group.add(makeSkyDome({ top: 0x04040e, horizon: 0x141c38, glowColor: 0x2a3a6a, radius: 420 }));
   group.add(makeStarfield(1100, 380, 17));
@@ -95,7 +105,7 @@ export function createMintaka(ctx) {
   // Sandy shore strip.
   const sand = new THREE.Mesh(
     new THREE.PlaneGeometry(14, 110),
-    new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 1 })
+    new THREE.MeshStandardMaterial({ color: 0x8a7a5a, map: sandTex, roughness: 1 })
   );
   sand.rotation.x = -Math.PI / 2;
   sand.position.set(-25, 0.05, 0);
@@ -220,13 +230,13 @@ export function createMintaka(ctx) {
   caveHome.add(homeGlow);
   group.add(caveHome);
   // Terrace + steps down to the ground.
-  const terrace = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.5, 8.5), new THREE.MeshStandardMaterial({ color: 0x5a5a6a, roughness: 1 }));
+  const terrace = new THREE.Mesh(new THREE.BoxGeometry(4.5, 0.5, 8.5), new THREE.MeshStandardMaterial({ color: 0x5a5a6a, map: stoneTex, roughness: 1 }));
   terrace.position.set(-17.8, 5.6, 4);
   terrace.castShadow = true;
   terrace.receiveShadow = true;
   group.add(terrace);
   for (let i = 0; i < 4; i++) {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 2.2), new THREE.MeshStandardMaterial({ color: 0x55555f, roughness: 1 }));
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 2.2), new THREE.MeshStandardMaterial({ color: 0x55555f, map: stoneTex, roughness: 1 }));
     step.position.set(-15.2 + i * 1.0, 5.2 - i * 1.3, 4);
     group.add(step);
   }
@@ -342,7 +352,7 @@ export function createMintaka(ctx) {
   chamber.add(chamberGlow);
   group.add(chamber);
   // Landing terrace at the chamber mouth, over the water.
-  const chamberTerrace = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x55555f, roughness: 1 }));
+  const chamberTerrace = new THREE.Mesh(new THREE.BoxGeometry(5, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0x55555f, map: stoneTex, roughness: 1 }));
   chamberTerrace.position.set(-33.8, 2.4, -4);
   chamberTerrace.castShadow = true;
   group.add(chamberTerrace);
@@ -385,7 +395,7 @@ export function createMintaka(ctx) {
   // Hidden passage — stone steps down the cliff face to the water,
   // tucked behind rocks so it reads as hidden, not grand.
   for (let i = 0; i < 6; i++) {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.32, 1.0), new THREE.MeshStandardMaterial({ color: 0x4a4a58, roughness: 1 }));
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.32, 1.0), new THREE.MeshStandardMaterial({ color: 0x4a4a58, map: stoneTex, roughness: 1 }));
     step.position.set(-33.6 - i * 0.55, 2.1 - i * 0.36, -6.8 - i * 0.45);
     group.add(step);
   }
@@ -396,7 +406,7 @@ export function createMintaka(ctx) {
   screenRock2.position.set(-35.4, 0.5, -8.8);
   group.add(screenRock2);
   // Small dock + moored rowboat at the water.
-  const dock = new THREE.Mesh(new THREE.BoxGeometry(3, 0.25, 2), new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 1 }));
+  const dock = new THREE.Mesh(new THREE.BoxGeometry(3, 0.25, 2), new THREE.MeshStandardMaterial({ color: 0x6b4a2e, map: woodTex, roughness: 1 }));
   dock.position.set(-37.2, 0.35, -10);
   group.add(dock);
   const dockLamp = makeGlowSprite('rgba(255,190,100,0.9)', 1.2, 0.65);
@@ -404,7 +414,7 @@ export function createMintaka(ctx) {
   group.add(dockLamp);
   const boatHull = new THREE.Mesh(
     new THREE.SphereGeometry(1.0, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ color: 0x5a3a22, map: woodTex, roughness: 0.9, side: THREE.DoubleSide })
   );
   boatHull.scale.set(0.5, 0.45, 1.5);
   boatHull.rotation.x = Math.PI;
@@ -441,7 +451,7 @@ export function createMintaka(ctx) {
   group.add(tunnel);
   // Stone path from the tunnel mouth toward the grove.
   for (let i = 0; i < 6; i++) {
-    const stone = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.08, 7), new THREE.MeshStandardMaterial({ color: 0x7a7a8a, roughness: 1 }));
+    const stone = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.5, 0.08, 7), villageStoneMat);
     stone.position.set(-19 + i * 1.6, 0.06, -4 - i * 0.35);
     group.add(stone);
   }
@@ -626,15 +636,15 @@ export function createMintaka(ctx) {
   const bridge = new THREE.Group();
   bridge.position.set(8, 0, -1);
   bridge.rotation.y = 0.5;
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.18, 1.4), new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 1 }));
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.18, 1.4), new THREE.MeshStandardMaterial({ color: 0x6b4a2e, map: woodTex, roughness: 1 }));
   deck.position.y = 0.55;
   bridge.add(deck);
   [-0.6, 0.6].forEach((z) => {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.08, 0.08), new THREE.MeshStandardMaterial({ color: 0x4a3220 }));
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.08, 0.08), new THREE.MeshStandardMaterial({ color: 0x4a3220, map: woodTex }));
     rail.position.set(0, 1.05, z);
     bridge.add(rail);
     [-1.4, 0, 1.4].forEach((x) => {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 5), new THREE.MeshStandardMaterial({ color: 0x4a3220 }));
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.5, 5), new THREE.MeshStandardMaterial({ color: 0x4a3220, map: woodTex }));
       post.position.set(x, 0.8, z);
       bridge.add(post);
     });
@@ -652,10 +662,9 @@ export function createMintaka(ctx) {
     new THREE.Vector3(-8, 0.08, 4),
     new THREE.Vector3(-13, 0.08, 5),
   ]);
-  const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7a8a, roughness: 1 });
   for (let i = 0; i < 30; i++) {
     const p = pathCurve.getPointAt(i / 29);
-    const stone = new THREE.Mesh(new THREE.CylinderGeometry(0.5 + rnd() * 0.25, 0.55 + rnd() * 0.25, 0.08, 7), stoneMat);
+    const stone = new THREE.Mesh(new THREE.CylinderGeometry(0.5 + rnd() * 0.25, 0.55 + rnd() * 0.25, 0.08, 7), villageStoneMat);
     stone.position.set(p.x + (rnd() - 0.5) * 0.5, 0.06, p.z + (rnd() - 0.5) * 0.5);
     stone.rotation.y = rnd() * Math.PI;
     group.add(stone);
@@ -824,6 +833,7 @@ export function createMintaka(ctx) {
             follow: false, root: root || null, where: '',
             purpose: 'META MISSING — needs a grounded description.',
             activity: '', creations: [], position: pos,
+            figure: null, portrait: null, appearance: null, gear: null,
           });
           return;
         }
@@ -832,6 +842,13 @@ export function createMintaka(ctx) {
           follow: meta.follow, root: root || null, where: meta.where,
           purpose: meta.purpose, activity: meta.activity,
           creations: meta.creations, position: pos,
+          // Character-sheet data: single per-subject fields on the
+          // roster-meta entry, filled in later as portraits and
+          // details are made — null until then.
+          figure: meta.figure || null,
+          portrait: meta.portrait || null,
+          appearance: meta.appearance || null,
+          gear: meta.gear || null,
         });
       };
 

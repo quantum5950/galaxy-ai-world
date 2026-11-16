@@ -27,6 +27,9 @@
 //   base), advancing with world days. Shown as a continuation of the
 //   live "doing now" line in profiles — the live routine is never
 //   replaced, only grown from.
+// - Encounters: who a character has seen, derived from the same seeded
+//   system (character seed + world day) — same day, same faces. This
+//   is derivation, not live tracking; nothing watches the figures.
 //
 // The no-talk law stays: the awakening is VISIBLE only (profiles,
 // labels, thoughts). Nobody can talk to anyone. The gods' telepathy
@@ -1411,6 +1414,45 @@ export function getAwakening(subject, now = Date.now()) {
 export function getThought(subject, now = Date.now()) {
   const record = getAwakening(subject, now);
   return record ? record.thought : null;
+}
+
+// ---------- Encounters: who this one has seen ----------
+// Derived deterministically from the same seeded system as everything
+// above: (character seed + world day) through FNV-1a + mulberry32, so
+// the same day shows the same faces everywhere, fully offline. This is
+// NOT live tracking — nothing watches the figures. It is consistent
+// with the wandering they already do: figures pause and face each other
+// when they come near, so the faces they meet are the ones near them —
+// same-area faces first, then one from further away. Only people,
+// creatures, and animals can be "seen"; places, homes, and trees never
+// appear. Returns [] when no encounter can be derived (empty roster,
+// or nobody of a seeable kind), and the profile hides the section.
+export function getEncounters(subject, candidates, now = Date.now()) {
+  if (!subject || !Array.isArray(candidates) || !candidates.length) return [];
+  const seedKey = String(subject.id || subject.name);
+  const day = worldDay(now);
+  const pool = candidates.filter((c) => c && c.id !== subject.id &&
+    (c.kind === 'person' || c.kind === 'creature' || c.kind === 'animal'));
+  if (!pool.length) return [];
+  const rng = rngFor(seedKey, 'encounters', day);
+  const shuffled = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  };
+  const near = shuffled(pool.filter((c) => c.area && c.area === subject.area));
+  const far = shuffled(pool.filter((c) => c.area !== subject.area));
+  const ordered = [...near, ...far];
+  const count = 1 + Math.floor(rng() * 3); // 1–3 faces, seeded per day
+  const names = [];
+  for (const c of ordered) {
+    if (names.length >= count) break;
+    if (!names.includes(c.name)) names.push(c.name);
+  }
+  return names;
 }
 
 // Profile keys, for tests and tooling.

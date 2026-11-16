@@ -119,6 +119,304 @@ export function makeVeinGroundTexture(seed = 21) {
   return tex;
 }
 
+// Procedural stone texture — village paths, terraces, steps.
+// Drawn in near-white greys so the material's color tints it (map
+// multiplies color). Seeded, so the village looks the same every load.
+export function makeStoneTexture(seed = 31) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#cfcfd6';
+  g.fillRect(0, 0, 256, 256);
+  // Soft mottling — broad patches of slightly lighter/darker stone.
+  for (let i = 0; i < 90; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(232,232,238,0.16)' : 'rgba(150,150,164,0.16)';
+    const s = 8 + rnd() * 26;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.5 + rnd() * 0.7), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Fine speckle — the grain of cut stone.
+  for (let i = 0; i < 900; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(120,120,134,0.25)' : 'rgba(225,225,232,0.25)';
+    const s = 1 + rnd() * 2;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  // A few thin hairline cracks.
+  for (let v = 0; v < 7; v++) {
+    g.strokeStyle = 'rgba(110,110,126,0.35)';
+    g.lineWidth = 0.8;
+    g.beginPath();
+    let x = rnd() * 256, y = rnd() * 256;
+    g.moveTo(x, y);
+    for (let s = 0; s < 5; s++) {
+      x += (rnd() - 0.5) * 60; y += (rnd() - 0.5) * 60;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Procedural gold texture — hammered, lightly brushed gold for Asgard.
+// Drawn in warm near-white tones so the material's gold color tints it
+// (map multiplies color). Seeded, so Asgard looks the same every load.
+export function makeGoldTexture(seed = 61) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#f0dcb0';
+  g.fillRect(0, 0, 256, 256);
+  // Soft mottling — broad patches of slightly lighter/darker gold.
+  for (let i = 0; i < 80; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(252,240,205,0.16)' : 'rgba(205,170,100,0.16)';
+    const s = 10 + rnd() * 30;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.5 + rnd() * 0.7), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Hammered dents — small soft rings, the mark of the smith's hammer.
+  for (let i = 0; i < 110; i++) {
+    const x = rnd() * 256, y = rnd() * 256, r = 3 + rnd() * 7;
+    g.strokeStyle = rnd() > 0.5 ? 'rgba(255,244,210,0.22)' : 'rgba(190,150,80,0.22)';
+    g.lineWidth = 1 + rnd();
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.stroke();
+  }
+  // Fine brushed streaks — long, faint, mostly horizontal.
+  for (let i = 0; i < 60; i++) {
+    g.strokeStyle = `rgba(210,175,105,${0.06 + rnd() * 0.10})`;
+    g.lineWidth = 0.6 + rnd() * 0.8;
+    g.beginPath();
+    const y = rnd() * 256;
+    g.moveTo(0, y);
+    for (let x = 0; x <= 256; x += 32) {
+      g.lineTo(x, y + (rnd() - 0.5) * 4);
+    }
+    g.stroke();
+  }
+  // Tiny bright flecks — gold catching the light.
+  for (let i = 0; i < 500; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(255,246,215,0.35)' : 'rgba(200,165,90,0.3)';
+    const s = 1 + rnd() * 1.5;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Procedural wood texture — planks with grain, for the bridge, dock,
+// and rowboat. Near-white warm tones; the material's color tints it.
+export function makeWoodTexture(seed = 41) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#d8c0a0';
+  g.fillRect(0, 0, 256, 256);
+  const plankH = 64;
+  for (let p = 0; p < 4; p++) {
+    const y0 = p * plankH;
+    // Each plank its own warm shade.
+    g.fillStyle = `rgba(${170 + rnd() * 40},${130 + rnd() * 30},${80 + rnd() * 25},0.35)`;
+    g.fillRect(0, y0, 256, plankH);
+    // Grain — long wavy strokes along the plank.
+    for (let i = 0; i < 26; i++) {
+      g.strokeStyle = `rgba(120,85,45,${0.10 + rnd() * 0.18})`;
+      g.lineWidth = 0.7 + rnd() * 1.1;
+      g.beginPath();
+      let y = y0 + 4 + rnd() * (plankH - 8);
+      g.moveTo(0, y);
+      for (let x = 0; x <= 256; x += 32) {
+        g.lineTo(x, y + (rnd() - 0.5) * 5);
+      }
+      g.stroke();
+    }
+    // A knot or two, with rings.
+    if (rnd() > 0.35) {
+      const kx = 20 + rnd() * 216, ky = y0 + plankH / 2 + (rnd() - 0.5) * 20;
+      for (let r = 7; r > 0; r -= 2) {
+        g.strokeStyle = `rgba(110,75,35,${0.25 - r * 0.02})`;
+        g.lineWidth = 1;
+        g.beginPath();
+        g.ellipse(kx, ky, r * 1.6, r, 0, 0, Math.PI * 2);
+        g.stroke();
+      }
+    }
+    // Plank seam.
+    g.fillStyle = 'rgba(90,60,30,0.55)';
+    g.fillRect(0, y0 + plankH - 2, 256, 2);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Procedural sand texture — the shore strip. Pale grains on a warm base.
+export function makeSandTexture(seed = 51) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#e8dcbc';
+  g.fillRect(0, 0, 256, 256);
+  // Soft broad blotches.
+  for (let i = 0; i < 60; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(240,230,200,0.18)' : 'rgba(200,180,140,0.18)';
+    const s = 10 + rnd() * 30;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * 0.6, rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Fine grains.
+  for (let i = 0; i < 1600; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(160,140,100,0.3)' : 'rgba(245,236,208,0.3)';
+    const s = 1 + rnd() * 1.6;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 4);
+  return tex;
+}
+
+// Procedural bark texture — vertical ridges and fissures for the grove
+// glow-tree trunks (and the elvish treehouse trees, which share the
+// builder). Warm near-white tones so the trunk material's dark brown
+// color tints it (map multiplies color). Seeded, so the grove looks the
+// same every load. Ridges run vertically on the canvas, which maps to
+// the trunk's height on a cylinder.
+export function makeBarkTexture(seed = 71) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#c9b199';
+  g.fillRect(0, 0, 256, 256);
+  // Broad soft mottling — patches of lighter/darker bark.
+  for (let i = 0; i < 60; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(228,205,180,0.16)' : 'rgba(150,120,90,0.16)';
+    const s = 10 + rnd() * 28;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.6 + rnd() * 0.8), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Vertical ridges — long wavy bands running the height of the trunk.
+  for (let i = 0; i < 80; i++) {
+    const dark = rnd() > 0.45;
+    g.strokeStyle = dark ? `rgba(120,90,60,${0.10 + rnd() * 0.16})` : `rgba(235,215,190,${0.10 + rnd() * 0.14})`;
+    g.lineWidth = 2 + rnd() * 4;
+    g.beginPath();
+    let x = rnd() * 256;
+    g.moveTo(x, -4);
+    for (let y = 0; y <= 256; y += 32) {
+      g.lineTo(x + (rnd() - 0.5) * 10, y);
+    }
+    g.stroke();
+  }
+  // Deep fissures — a few dark, thin, wandering cracks between ridges.
+  for (let i = 0; i < 10; i++) {
+    g.strokeStyle = `rgba(70,45,25,${0.35 + rnd() * 0.2})`;
+    g.lineWidth = 1 + rnd() * 1.2;
+    g.beginPath();
+    let x = rnd() * 256;
+    g.moveTo(x, -4);
+    for (let y = 0; y <= 256; y += 32) {
+      g.lineTo(x + (rnd() - 0.5) * 8, y);
+    }
+    g.stroke();
+  }
+  // A knot or two, with rings.
+  for (let k = 0; k < 3; k++) {
+    if (rnd() < 0.3) continue;
+    const kx = 20 + rnd() * 216, ky = 20 + rnd() * 216;
+    for (let r = 8; r > 0; r -= 2) {
+      g.strokeStyle = `rgba(100,70,40,${0.28 - r * 0.02})`;
+      g.lineWidth = 1;
+      g.beginPath();
+      g.ellipse(kx, ky, r * 1.2, r * 1.8, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+  }
+  // Fine speckle — the grain of old bark.
+  for (let i = 0; i < 500; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(110,80,50,0.25)' : 'rgba(230,210,185,0.25)';
+    const s = 1 + rnd() * 1.5;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 1);
+  return tex;
+}
+
+// Procedural leaf texture — a dense canopy of small leaves for the grove
+// glow-tree foliage. Pale green-grey tones so each tree's foliage color
+// and glow tint it (map multiplies color); the emissive glow is
+// unaffected, so the canopies keep shining. Seeded, deterministic.
+export function makeLeafTexture(seed = 81) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#b8cbb0';
+  g.fillRect(0, 0, 256, 256);
+  // Soft broad mottling — light and shade moving through the canopy.
+  for (let i = 0; i < 50; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(225,238,210,0.15)' : 'rgba(140,165,130,0.15)';
+    const s = 12 + rnd() * 30;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.6 + rnd() * 0.6), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Leaves — many small overlapping ellipses, tones from pale gold-green
+  // through mid green to deep green, so the canopy reads leaf by leaf.
+  const leafTones = [
+    'rgba(232,240,205,0.85)', 'rgba(205,225,185,0.85)',
+    'rgba(175,205,160,0.85)', 'rgba(150,185,140,0.85)',
+    'rgba(220,228,170,0.8)', 'rgba(190,210,150,0.85)',
+  ];
+  for (let i = 0; i < 380; i++) {
+    const x = rnd() * 256, y = rnd() * 256;
+    const rx = 4 + rnd() * 6, ry = 2.5 + rnd() * 3;
+    const rot = rnd() * Math.PI;
+    g.fillStyle = leafTones[Math.floor(rnd() * leafTones.length)];
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+    g.fill();
+    // A short center vein on some leaves.
+    if (rnd() > 0.6) {
+      g.strokeStyle = 'rgba(120,150,105,0.4)';
+      g.lineWidth = 0.7;
+      g.beginPath();
+      g.moveTo(x - Math.cos(rot) * rx * 0.8, y - Math.sin(rot) * rx * 0.8);
+      g.lineTo(x + Math.cos(rot) * rx * 0.8, y + Math.sin(rot) * rx * 0.8);
+      g.stroke();
+    }
+  }
+  // Dark gaps between leaves — depth in the canopy.
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(90,115,85,${0.25 + rnd() * 0.25})`;
+    const s = 2 + rnd() * 4;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * 0.7, rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 // A simple glowing-window cottage. Returns group; windows glow warm.
 export function makeCottage({ body = 0x6b4a35, roof = 0x3a2b45, w = 3, h = 2.2, d = 2.6 } = {}) {
   const g = new THREE.Group();
@@ -157,18 +455,33 @@ export function makeCottage({ body = 0x6b4a35, roof = 0x3a2b45, w = 3, h = 2.2, 
   return g;
 }
 
+// Shared grove textures — one bark canvas + one leaf canvas, reused by
+// every glow tree so the grove reads as one forest (world-detail crew,
+// round 3). Created lazily on the first tree, so module load stays cheap.
+// Declared here, before makeGlowTree, so no top-level TDZ risk.
+let sharedBarkTex = null;
+let sharedLeafTex = null;
+function groveBarkTexture() {
+  if (!sharedBarkTex) sharedBarkTex = makeBarkTexture(71);
+  return sharedBarkTex;
+}
+function groveLeafTexture() {
+  if (!sharedLeafTex) sharedLeafTex = makeLeafTexture(81);
+  return sharedLeafTex;
+}
+
 // A glowing tree: dark trunk + luminous foliage orbs.
 export function makeGlowTree({ height = 5, glow = 0x7fe0c3, seed = 3 } = {}) {
   const rnd = mulberry32(seed);
   const g = new THREE.Group();
   const trunk = new THREE.Mesh(
     new THREE.CylinderGeometry(0.22, 0.38, height, 7),
-    new THREE.MeshStandardMaterial({ color: 0x2c1e14, roughness: 1 })
+    new THREE.MeshStandardMaterial({ color: 0x2c1e14, map: groveBarkTexture(), roughness: 1 })
   );
   trunk.position.y = height / 2;
   g.add(trunk);
   const foliageMat = new THREE.MeshStandardMaterial({
-    color: 0x14352c, emissive: glow, emissiveIntensity: 0.28, roughness: 0.8,
+    color: 0x14352c, map: groveLeafTexture(), emissive: glow, emissiveIntensity: 0.28, roughness: 0.8,
   });
   const blobs = 4 + Math.floor(rnd() * 2);
   for (let i = 0; i < blobs; i++) {

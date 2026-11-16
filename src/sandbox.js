@@ -443,6 +443,13 @@ export function createSandbox(ctx) {
         creations: w.def.creations,
         activity: w.def.waypoints[w.wpIndex].activity,
         position: w.person.position.clone(),
+        // Character-sheet data: the figure spec grounds appearance and
+        // gear (coat, tool of their craft). portrait/appearance/gear
+        // are single per-character fields, filled in later — null now.
+        figure: w.def.figure || null,
+        portrait: w.def.portrait || null,
+        appearance: w.def.appearance || null,
+        gear: w.def.gear || null,
       }));
     },
     // Sandbox structures for the roster: name + live root; descriptions

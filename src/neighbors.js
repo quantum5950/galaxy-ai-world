@@ -578,6 +578,14 @@ export function createNeighbors(ctx) {
         creations: def.creations,
         activity: def.routine[phase].activity,
         position: walkers[i].person.position.clone(),
+        // Character-sheet data: the figure spec grounds appearance and
+        // gear (robe, hat, tool of their craft). portrait/appearance/
+        // gear are single per-character fields, filled in later as
+        // portraits and details are made — null until then.
+        figure: def.figure || null,
+        portrait: def.portrait || null,
+        appearance: def.appearance || null,
+        gear: def.gear || null,
       }));
     },
     // Homes + well for the roster: name + live root; descriptions live in

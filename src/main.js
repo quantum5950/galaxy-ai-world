@@ -23,6 +23,7 @@ import { createAsgard } from './asgard.js';
 import { setupXR } from './xr.js';
 import { PHASES, phaseAt } from './neighbors.js';
 import { createNeighborsUI } from './profiles.js';
+import { createAgentBar } from './agentbar.js';
 
 // ---------- Renderer ----------
 const canvasHost = document.getElementById('app');
@@ -151,7 +152,7 @@ function enterWorld(id, { instant = false, fly = false } = {}) {
   if (communeBtnEl) communeBtnEl.style.display = id === 'asgard' ? '' : 'none';
   if (telepathyReady) telepathyOnTravel(id);
   document.body.classList.toggle('on-mintaka', id === 'mintaka');
-  if (id === 'mintaka') neighborsUI.refresh();
+  if (id === 'mintaka') { neighborsUI.refresh(); agentBar.refresh(); }
   if (id === 'fold') {
     camera.position.copy(world.camera.position);
     controls.target.copy(world.camera.target);
@@ -246,25 +247,42 @@ buildWorld('asgard', createAsgard);
 // with them once the flight lands — see Follow mode above.
 const neighborsBox = document.getElementById('neighbors-box');
 const neighborsToggle = document.getElementById('neighbors-toggle');
+// Shared selection: the roster and the agent bar both fly the camera
+// to a subject and open its character sheet. Observation only —
+// picking is watching, never talking. (Runs only on clicks, after
+// boot, so referencing neighborsUI here is safe.)
+function selectSubject(id) {
+  const subject = worlds.mintaka.getSubjects().find((p) => p.id === id);
+  if (subject) {
+    if (subject.follow && subject.root) {
+      pendingFollowId = id;
+      pendingFollowName = subject.name;
+      followRoot = subject.root;
+      followHasPrev = false;
+    } else {
+      stopFollow();
+    }
+    flyToPerson(subject);
+  }
+  neighborsUI.openProfile(id);
+}
 const neighborsUI = createNeighborsUI({
   listEl: document.getElementById('neighbors-list'),
   profileEl: document.getElementById('profile'),
   getSubjects: () => (worlds.mintaka && worlds.mintaka.getSubjects ? worlds.mintaka.getSubjects() : []),
-  onSelect: (id) => {
-    const subject = worlds.mintaka.getSubjects().find((p) => p.id === id);
-    if (subject) {
-      if (subject.follow && subject.root) {
-        pendingFollowId = id;
-        pendingFollowName = subject.name;
-        followRoot = subject.root;
-        followHasPrev = false;
-      } else {
-        stopFollow();
-      }
-      flyToPerson(subject);
-    }
-    neighborsUI.openProfile(id);
-  },
+  onSelect: selectSubject,
+});
+// The Agent Bar: every inhabitant of Mintaka as an individual agent —
+// name, doing now, thinking now — live from the same roster and the
+// same awakening the profiles show. Mintaka only; the CSS hides it
+// everywhere else (body.on-mintaka).
+const agentBar = createAgentBar({
+  barEl: document.getElementById('agent-bar'),
+  stripEl: document.getElementById('agent-strip'),
+  dayEl: document.getElementById('agent-bar-day'),
+  toggleEl: document.getElementById('agent-bar-toggle'),
+  getSubjects: () => (worlds.mintaka && worlds.mintaka.getSubjects ? worlds.mintaka.getSubjects() : []),
+  onSelect: selectSubject,
 });
 // Approach the subject from a direction with a clear line of sight:
 // keep the current bearings first, then sweep around in 45° steps,
@@ -334,6 +352,9 @@ neighborsToggle.addEventListener('click', () => {
 document.getElementById('neighbors-close').addEventListener('click', () => {
   neighborsBox.classList.remove('open');
   neighborsToggle.setAttribute('aria-expanded', 'false');
+  // Closing the box resets it to the roster list, so it never reopens
+  // mid-profile.
+  neighborsUI.closeProfile();
 });
 document.getElementById('profile-close').addEventListener('click', () => neighborsUI.closeProfile());
 
@@ -683,9 +704,11 @@ renderer.setAnimationLoop(() => {
     }
     // Keep the roster "doing now" lines live (scientists move on
     // their own dwell timers, not the world clock, so refresh on a beat).
+    // The agent bar rides the same beat — same live data, same moment.
     if (t - lastRosterRefresh > 3) {
       lastRosterRefresh = t;
       neighborsUI.refresh();
+      agentBar.refresh();
     }
   }
 

@@ -751,6 +751,14 @@ export function createLab(ctx) {
         creations: w.def.creations,
         activity: w.def.waypoints[w.wpIndex].activity,
         position: w.person.position.clone(),
+        // Character-sheet data: the figure spec grounds appearance and
+        // gear (lab coat, tool of their craft). portrait/appearance/
+        // gear are single per-character fields, filled in later as
+        // portraits and details are made — null until then.
+        figure: w.def.figure || null,
+        portrait: w.def.portrait || null,
+        appearance: w.def.appearance || null,
+        gear: w.def.gear || null,
       }));
     },
     // Lab stations for the roster: name + live root; descriptions live in
