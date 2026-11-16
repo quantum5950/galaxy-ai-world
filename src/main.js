@@ -148,7 +148,7 @@ function enterWorld(id, { instant = false, fly = false } = {}) {
   shiftBtn.style.display = id === 'mintaka' && world.arrash ? '' : 'none';
   const communeBtnEl = document.getElementById('commune');
   if (communeBtnEl) communeBtnEl.style.display = id === 'asgard' ? '' : 'none';
-  telepathyOnTravel(id);
+  if (telepathyReady) telepathyOnTravel(id);
   document.body.classList.toggle('on-mintaka', id === 'mintaka');
   if (id === 'mintaka') neighborsUI.refresh();
   if (id === 'fold') {
@@ -345,6 +345,9 @@ function setupComposer() {
   composer.addPass(bloomPass);
   composer.addPass(new OutputPass());
 }
+// The telepathy block below initializes after this line; its timer variable
+// must not be touched before then (it would throw and kill the whole boot).
+let telepathyReady = false;
 enterWorld('hub', { instant: true });
 setupComposer();
 
@@ -598,6 +601,10 @@ if (telepathyEl && telepathyGodsEl && telepathyForm) {
     }, 1200 + Math.random() * 1000);
   });
 }
+
+// The telepathy block has fully initialized; travel may now schedule the
+// gods' ambient thoughts.
+telepathyReady = true;
 
 // ---------- WebXR ----------
 const vrButton = document.getElementById('vr-button');
