@@ -1,7 +1,7 @@
 // lab.js — the R&D Department and Research Lab on Mintaka.
 // East of the grove, around a courtyard: the research hall, the
 // prototyping workshop (where the symbiotic suit is built), the materials
-// library, the safe test area (where the Fold wristband is bench-tested),
+// library, the safe test area (where the Fold wristband is tested),
 // and the Fold physics array (instruments and math only — live Fold taps
 // happen ONLY at the remote sandbox proving grounds; see sandbox.js).
 //
@@ -294,12 +294,12 @@ export function createLab(ctx) {
   makeClickable(suitStand, {
     name: 'Symbiotic Suit — Mark III',
     lines: [
-      'The Mark III stands open and unfinished on its cradle, chest core pulsing slow and steady. Milo says the suit doesn\'t wear the person — it listens to them.',
-      'Gold trim, moon-glass joints, a neural lattice woven through the spine. The suit is built for one wearer, and it is learning his heartbeat already.',
+      'The Mark III is in its first fit test. Between fittings it rests on its cradle, chest core pulsing slow and steady — and when Milo steps inside, the suit listens: the moon-glass joints flex, the lattice hums, and the core settles into time with his breathing.',
+      'Gold trim, moon-glass joints, a neural lattice woven through the spine. Cora watches the alloys hold, Theo watches the lattice listen. The suit is still learning its wearer — one fitting at a time.',
     ],
   });
   interactables.push(suitStand);
-  labels.add('Symbiotic Suit — Mark III (in progress)', suitStand, { yOffset: 3.2, className: 'label-place', maxDistance: 70 });
+  labels.add('Symbiotic Suit — Mark III (fit test)', suitStand, { yOffset: 3.2, className: 'label-place', maxDistance: 70 });
 
   // ======== MATERIALS LIBRARY — shelves of impossible stuff ========
   const library = new THREE.Group();
@@ -418,8 +418,8 @@ export function createLab(ctx) {
   makeClickable(testArea, {
     name: 'Fold Wristband — prototype',
     lines: [
-      'The wristband floats above its pedestal, gold and violet, humming almost too quietly to hear. Ren tunes it by hand, a fraction of a note at a time.',
-      'Bench tests only, here in the shielded ring. Anything that actually touches the Fold happens far away, inside the sandbox dome. Safety is the design.',
+      'The wristband rests above its pedestal between tests, gold and violet, humming almost too quietly to hear — but the bench days are over. Ren wears it for the first field test now, tuned with Yara\'s numbers, a fraction of a note at a time.',
+      'It carried a feeling across the courtyard today, from Ren\'s wrist to Theo — the first time the math walked out of the ring on someone\'s arm. Anything that actually touches the Fold still happens far away, inside the sandbox dome. Safety is the design.',
     ],
   });
   interactables.push(testArea);

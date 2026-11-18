@@ -220,7 +220,7 @@ export function createSandbox(ctx) {
   makeClickable(rig, {
     name: 'Fold Tap Rig — contained',
     lines: [
-      'The rig holds a small, steady Fold open inside its rings — a swirl of violet light, calm as a held breath. The dome hums around it. Nothing leaves the dome. That is the whole point.',
+      'The rig holds a small, steady Fold open inside its rings — a swirl of violet light, calm as a held breath. Today it ran its first tap on Yara\'s new numbers: one tap, the dome steady, the readings soft. Nothing leaves the dome. That is the whole point.',
       'Elias\'s rule, painted on the rig in plain letters: ONE TAP AT A TIME. Petra\'s rule, right under it: CHECK THE DOME FIRST. The rig has never once been allowed to forget either.',
     ],
   });
