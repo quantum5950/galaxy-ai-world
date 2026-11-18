@@ -162,6 +162,61 @@ export function makeStoneTexture(seed = 31) {
   return tex;
 }
 
+// Procedural cliff-rock texture — the big cliff face and the cave
+// facades. Horizontal strata bands, vertical fissures, and mineral
+// flecks, drawn in near-white greys so the material's color tints it
+// (map multiplies color). Seeded, so the cliff looks the same every load.
+export function makeCliffTexture(seed = 141) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#c9c9d2';
+  g.fillRect(0, 0, 256, 256);
+  // Broad mottling — uneven rock, lighter and darker patches.
+  for (let i = 0; i < 70; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(232,232,238,0.15)' : 'rgba(140,140,156,0.15)';
+    const s = 12 + rnd() * 34;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.5 + rnd() * 0.7), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Horizontal strata — stacked rock layers, slightly wavy.
+  for (let y = 8; y < 256; y += 14 + rnd() * 18) {
+    g.strokeStyle = `rgba(105,105,122,${0.18 + rnd() * 0.16})`;
+    g.lineWidth = 1 + rnd() * 2;
+    g.beginPath();
+    g.moveTo(0, y);
+    for (let x = 0; x <= 256; x += 32) {
+      g.lineTo(x, y + (rnd() - 0.5) * 6);
+    }
+    g.stroke();
+  }
+  // Vertical fissures — cracks running down the rock face.
+  for (let v = 0; v < 12; v++) {
+    g.strokeStyle = 'rgba(95,95,112,0.4)';
+    g.lineWidth = 0.8 + rnd() * 1.2;
+    g.beginPath();
+    let x = rnd() * 256, y = rnd() * 60;
+    g.moveTo(x, y);
+    for (let s = 0; s < 6; s++) {
+      x += (rnd() - 0.5) * 24; y += 18 + rnd() * 26;
+      g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  // Mineral flecks — tiny bright and dark grains in the rock.
+  for (let i = 0; i < 700; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(115,115,130,0.28)' : 'rgba(228,228,235,0.28)';
+    const s = 1 + rnd() * 2;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
 // Procedural gold texture — hammered, lightly brushed gold for Asgard.
 // Drawn in warm near-white tones so the material's gold color tints it
 // (map multiplies color). Seeded, so Asgard looks the same every load.
@@ -415,6 +470,195 @@ export function makeLeafTexture(seed = 81) {
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
   return tex;
+}
+
+// Procedural brushed-metal texture — fine brushed streaks, faint
+// scratches and soft mottling for the lab's instruments, benches and
+// dishes. Cool near-white greys so each metal's color tints it (map
+// multiplies color). Seeded, deterministic.
+export function makeMetalTexture(seed = 91) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#dfe2e8';
+  g.fillRect(0, 0, 256, 256);
+  // Soft mottling — broad patches of slightly lighter/darker metal.
+  for (let i = 0; i < 70; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(238,240,245,0.16)' : 'rgba(170,175,188,0.16)';
+    const s = 10 + rnd() * 28;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.5 + rnd() * 0.7), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Brushed streaks — many long, faint, mostly horizontal lines.
+  for (let i = 0; i < 220; i++) {
+    g.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${0.05 + rnd() * 0.10})` : `rgba(150,155,170,${0.05 + rnd() * 0.10})`;
+    g.lineWidth = 0.5 + rnd() * 0.8;
+    g.beginPath();
+    const y = rnd() * 256;
+    g.moveTo(0, y);
+    for (let x = 0; x <= 256; x += 32) {
+      g.lineTo(x, y + (rnd() - 0.5) * 2);
+    }
+    g.stroke();
+  }
+  // A few fine scratches — thin diagonal marks, the wear of use.
+  for (let i = 0; i < 14; i++) {
+    g.strokeStyle = `rgba(120,125,140,${0.18 + rnd() * 0.15})`;
+    g.lineWidth = 0.6;
+    g.beginPath();
+    const x = rnd() * 256, y = rnd() * 256;
+    const len = 20 + rnd() * 50, ang = (rnd() - 0.5) * 0.9;
+    g.moveTo(x, y);
+    g.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+    g.stroke();
+  }
+  // Fine speckle — the grain of worked metal.
+  for (let i = 0; i < 500; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(140,145,160,0.25)' : 'rgba(240,242,246,0.25)';
+    const s = 1 + rnd() * 1.5;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Procedural glass texture — soft diagonal light streaks and faint
+// smudges on a pale near-white base, so lit windows and crystals read
+// as glass rather than flat glowing planes. Seeded, deterministic.
+export function makeGlassTexture(seed = 101) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#eef4f8';
+  g.fillRect(0, 0, 256, 256);
+  // Soft broad mottling — gentle light and shade across the pane.
+  for (let i = 0; i < 40; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(255,255,255,0.18)' : 'rgba(190,205,220,0.18)';
+    const s = 12 + rnd() * 30;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.6 + rnd() * 0.6), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Diagonal light streaks — the reflections a window catches.
+  for (let i = 0; i < 9; i++) {
+    const x = rnd() * 256 - 60;
+    const w = 8 + rnd() * 22;
+    g.fillStyle = `rgba(255,255,255,${0.10 + rnd() * 0.14})`;
+    g.beginPath();
+    g.moveTo(x, -10);
+    g.lineTo(x + w, -10);
+    g.lineTo(x + w + 90, 266);
+    g.lineTo(x + 90, 266);
+    g.closePath();
+    g.fill();
+  }
+  // Faint smudges — the touch of hands and weather on the glass.
+  for (let i = 0; i < 16; i++) {
+    g.fillStyle = `rgba(170,190,205,${0.06 + rnd() * 0.08})`;
+    const s = 8 + rnd() * 22;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * 0.7, rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Fine speckle — dust on the pane.
+  for (let i = 0; i < 200; i++) {
+    g.fillStyle = rnd() > 0.5 ? 'rgba(255,255,255,0.3)' : 'rgba(180,195,210,0.3)';
+    const s = 1 + rnd() * 1.2;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Procedural water texture — moonlit ripples for the ocean and the stream.
+// Drawn in near-white pale blue-grey so the material's color tints it
+// (map multiplies color): the deep ocean blue stays deep, the stream
+// stays its own blue-green. Seeded, so the water looks the same every load.
+export function makeWaterTexture(seed = 111) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#dbe6ef';
+  g.fillRect(0, 0, 256, 256);
+  // Soft broad mottling — slow swells of lighter and darker water.
+  for (let i = 0; i < 50; i++) {
+    const light = rnd() > 0.5;
+    g.fillStyle = light ? 'rgba(255,255,255,0.14)' : 'rgba(140,170,200,0.14)';
+    const s = 10 + rnd() * 28;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, s, s * (0.5 + rnd() * 0.6), rnd() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Ripple rings — thin, broken circles where the moonlight catches.
+  for (let i = 0; i < 36; i++) {
+    const light = rnd() > 0.5;
+    g.strokeStyle = light ? `rgba(255,255,255,${0.12 + rnd() * 0.18})` : `rgba(120,150,185,${0.10 + rnd() * 0.14})`;
+    g.lineWidth = 0.8 + rnd() * 1.2;
+    g.beginPath();
+    g.ellipse(rnd() * 256, rnd() * 256, 4 + rnd() * 18, (4 + rnd() * 18) * (0.4 + rnd() * 0.4), rnd() * Math.PI, rnd() * Math.PI, rnd() * Math.PI + Math.PI * (0.6 + rnd() * 0.9));
+    g.stroke();
+  }
+  // Fine wave streaks — short curved lines, the surface moving.
+  for (let i = 0; i < 120; i++) {
+    g.strokeStyle = rnd() > 0.5 ? `rgba(255,255,255,${0.10 + rnd() * 0.16})` : `rgba(130,160,195,${0.08 + rnd() * 0.12})`;
+    g.lineWidth = 0.7 + rnd() * 0.8;
+    const x = rnd() * 256, y = rnd() * 256, len = 6 + rnd() * 18;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + len * 0.5, y + (rnd() - 0.5) * 4, x + len, y + (rnd() - 0.5) * 3);
+    g.stroke();
+  }
+  // Sparkle flecks — moonlight glinting on the crests.
+  for (let i = 0; i < 240; i++) {
+    g.fillStyle = `rgba(255,255,255,${0.25 + rnd() * 0.45})`;
+    const s = 1 + rnd() * 1.6;
+    g.fillRect(rnd() * 256, rnd() * 256, s, s);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+// Procedural cloud texture — soft moonlit puffs for the night sky.
+// Transparent background; white blobs with soft radial falloff, so the
+// sprite reads as cloud and lets the stars show through. Seeded.
+export function makeCloudTexture(seed = 121) {
+  const rnd = mulberry32(seed);
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const g = c.getContext('2d');
+  // A low band of overlapping puffs — one cloud, wider than it is tall.
+  for (let i = 0; i < 16; i++) {
+    const cx = 30 + rnd() * 196;
+    const cy = 52 + (rnd() - 0.5) * 36;
+    const r = 16 + rnd() * 30;
+    const grad = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, `rgba(235,242,255,${0.16 + rnd() * 0.14})`);
+    grad.addColorStop(0.6, `rgba(220,232,255,${0.08 + rnd() * 0.08})`);
+    grad.addColorStop(1, 'rgba(220,232,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+  // A few small high wisps above the band.
+  for (let i = 0; i < 6; i++) {
+    const cx = 40 + rnd() * 176;
+    const cy = 24 + rnd() * 20;
+    const r = 8 + rnd() * 14;
+    const grad = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, `rgba(235,242,255,${0.10 + rnd() * 0.10})`);
+    grad.addColorStop(1, 'rgba(220,232,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(cx - r, cy - r, r * 2, r * 2);
+  }
+  return new THREE.CanvasTexture(c);
 }
 
 // A simple glowing-window cottage. Returns group; windows glow warm.

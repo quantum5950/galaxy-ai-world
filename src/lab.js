@@ -21,7 +21,37 @@
 // thing as death here — only doorways.
 
 import * as THREE from 'three';
-import { makeGlowSprite, makeRock, makeSignPost, makeClickable, mulberry32 } from './utils.js';
+import { makeGlowSprite, makeRock, makeSignPost, makeClickable, mulberry32, makeMetalTexture, makeGlassTexture, makeGoldTexture, makeWoodTexture } from './utils.js';
+
+// Shared lab textures — one brushed-metal canvas, one glass canvas, one
+// hammered-gold canvas, reused by every metal / glass / gold surface in
+// the lab (world-detail crew, round 4). Lazy singletons, created on first
+// use — never at module top level, so no TDZ risk at boot. The gold
+// texture uses its own seed (111) so the lab's gold reads differently
+// from Asgard's (seed 61).
+let sharedLabMetalTex = null;
+let sharedLabGlassTex = null;
+let sharedLabGoldTex = null;
+let sharedLabWoodTex = null;
+function labMetalTexture() {
+  if (!sharedLabMetalTex) sharedLabMetalTex = makeMetalTexture(91);
+  return sharedLabMetalTex;
+}
+function labGlassTexture() {
+  if (!sharedLabGlassTex) sharedLabGlassTex = makeGlassTexture(101);
+  return sharedLabGlassTex;
+}
+function labGoldTexture() {
+  if (!sharedLabGoldTex) sharedLabGoldTex = makeGoldTexture(111);
+  return sharedLabGoldTex;
+}
+// Wood for the courtyard props (world-detail crew, round 10): its own
+// seed (161) so the lab's crates and barrels read differently from the
+// village wood (seed 41).
+function labWoodTexture() {
+  if (!sharedLabWoodTex) sharedLabWoodTex = makeWoodTexture(161);
+  return sharedLabWoodTex;
+}
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
@@ -61,11 +91,11 @@ export function makeScientist({ coat = 0xe8e8f0, skin = 0xe8c9a8, hair = 0x3a2a1
     tablet.rotation.x = -0.4;
     p.add(tablet);
   } else if (accessory === 'vial') {
-    const vial = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 6), new THREE.MeshStandardMaterial({ color: 0x37e0c8, emissive: 0x37e0c8, emissiveIntensity: 1.4, transparent: true, opacity: 0.9 }));
+    const vial = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 6), new THREE.MeshStandardMaterial({ color: 0x37e0c8, emissive: 0x37e0c8, emissiveIntensity: 1.4, transparent: true, opacity: 0.9, map: labGlassTexture() }));
     vial.position.set(0.44, 1.0, 0.15);
     p.add(vial);
   } else if (accessory === 'wrench') {
-    const wrench = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.8, roughness: 0.35 }));
+    const wrench = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.8, roughness: 0.35, map: labMetalTexture() }));
     wrench.position.set(0.46, 0.95, 0.1);
     wrench.rotation.z = 0.4;
     p.add(wrench);
@@ -119,7 +149,7 @@ export function createLab(ctx) {
   roof.position.y = 4.2;
   hall.add(roof);
   // Glass front — warm, lit, full of work.
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0xffe8b8, emissive: 0xffc46b, emissiveIntensity: 0.9, roughness: 0.3 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0xffe8b8, emissive: 0xffc46b, emissiveIntensity: 0.9, roughness: 0.3, map: labGlassTexture() });
   for (let i = -1; i <= 1; i++) {
     const win = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 2.2), glassMat);
     win.position.set(i * 2.6, 2.2, 3.28);
@@ -129,10 +159,10 @@ export function createLab(ctx) {
   door.position.set(0, 1.2, 3.28);
   hall.add(door);
   // Roof dish — listening to the sky.
-  const dishMast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.6, 6), new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.7, roughness: 0.4 }));
+  const dishMast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.6, 6), new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.7, roughness: 0.4, map: labMetalTexture() }));
   dishMast.position.set(2.8, 6.4, -1);
   hall.add(dishMast);
-  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.8, roughness: 0.3, side: THREE.DoubleSide }));
+  const dish = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.8, roughness: 0.3, side: THREE.DoubleSide, map: labMetalTexture() }));
   dish.position.set(2.8, 7.2, -1);
   dish.rotation.x = -0.7;
   hall.add(dish);
@@ -187,11 +217,11 @@ export function createLab(ctx) {
       leg.position.set(bx + lx, 0.45, bz + lz);
       shop.add(leg);
     });
-    const tool = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.2), new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.8, roughness: 0.3 }));
+    const tool = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.2), new THREE.MeshStandardMaterial({ color: 0xb8bcc8, metalness: 0.8, roughness: 0.3, map: labMetalTexture() }));
     tool.position.set(bx + 0.4, 1.03, bz);
     tool.rotation.y = rnd();
     shop.add(tool);
-    const parts = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, metalness: 0.7, roughness: 0.4 }));
+    const parts = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, metalness: 0.7, roughness: 0.4, map: labMetalTexture() }));
     parts.position.set(bx - 0.5, 1.05, bz + 0.15);
     shop.add(parts);
   });
@@ -213,11 +243,11 @@ export function createLab(ctx) {
   // an armored suit with an opaque glowing visor, mid-build.
   const suitStand = new THREE.Group();
   suitStand.position.set(24, 0, -1.2);
-  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.85, 0.35, 12), new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.7, metalness: 0.4 }));
+  const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.85, 0.35, 12), new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.7, metalness: 0.4, map: labMetalTexture() }));
   pedestal.position.y = 0.18;
   suitStand.add(pedestal);
-  const suitMat = new THREE.MeshStandardMaterial({ color: 0x2e3a4e, roughness: 0.45, metalness: 0.6 });
-  const suitTrim = new THREE.MeshStandardMaterial({ color: 0xd8b45a, roughness: 0.35, metalness: 0.85 });
+  const suitMat = new THREE.MeshStandardMaterial({ color: 0x2e3a4e, roughness: 0.45, metalness: 0.6, map: labMetalTexture() });
+  const suitTrim = new THREE.MeshStandardMaterial({ color: 0xd8b45a, roughness: 0.35, metalness: 0.85, map: labGoldTexture() });
   const suitTorso = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.7, 6, 12), suitMat);
   suitTorso.position.y = 1.35;
   suitStand.add(suitTorso);
@@ -306,7 +336,7 @@ export function createLab(ctx) {
   const displayPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.65, 0.8, 10), new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.7 }));
   displayPedestal.position.set(37.5, 0.4, -0.5);
   group.add(displayPedestal);
-  const bigCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.65), new THREE.MeshStandardMaterial({ color: 0x9ad5ff, emissive: 0x4a8ac8, emissiveIntensity: 1.8, roughness: 0.2, transparent: true, opacity: 0.95 }));
+  const bigCrystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.65), new THREE.MeshStandardMaterial({ color: 0x9ad5ff, emissive: 0x4a8ac8, emissiveIntensity: 1.8, roughness: 0.2, transparent: true, opacity: 0.95, map: labGlassTexture() }));
   bigCrystal.position.set(37.5, 1.7, -0.5);
   bigCrystal.scale.y = 1.5;
   group.add(bigCrystal);
@@ -332,7 +362,7 @@ export function createLab(ctx) {
   // ======== SAFE TEST AREA — wristband bench tests, contained ========
   const testArea = new THREE.Group();
   testArea.position.set(31, 0, 4);
-  const padRing = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.12, 8, 36), new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0x8a6a2a, emissiveIntensity: 0.6, roughness: 0.5 }));
+  const padRing = new THREE.Mesh(new THREE.TorusGeometry(4.2, 0.12, 8, 36), new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0x8a6a2a, emissiveIntensity: 0.6, roughness: 0.5, map: labGoldTexture() }));
   padRing.rotation.x = Math.PI / 2;
   padRing.position.y = 0.1;
   testArea.add(padRing);
@@ -343,7 +373,7 @@ export function createLab(ctx) {
   // Shield posts.
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 1.5, 6), new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.7, roughness: 0.4 }));
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 1.5, 6), new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.7, roughness: 0.4, map: labMetalTexture() }));
     post.position.set(Math.cos(a) * 4.2, 0.75, Math.sin(a) * 4.2);
     testArea.add(post);
     const tip = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshStandardMaterial({ color: 0x37e0c8, emissive: 0x37e0c8, emissiveIntensity: 1.8 }));
@@ -356,10 +386,10 @@ export function createLab(ctx) {
   shieldWall.position.y = 0.95;
   testArea.add(shieldWall);
   // The wristband pedestal.
-  const wbPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 0.9, 10), new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.6, metalness: 0.4 }));
+  const wbPedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.55, 0.9, 10), new THREE.MeshStandardMaterial({ color: 0x3a3a4a, roughness: 0.6, metalness: 0.4, map: labMetalTexture() }));
   wbPedestal.position.y = 0.45;
   testArea.add(wbPedestal);
-  const wristband = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.09, 8, 20), new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0x8a6a2a, emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.3 }));
+  const wristband = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.09, 8, 20), new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0x8a6a2a, emissiveIntensity: 0.8, metalness: 0.9, roughness: 0.3, map: labGoldTexture() }));
   wristband.position.y = 1.35;
   wristband.rotation.x = Math.PI / 2.3;
   testArea.add(wristband);
@@ -397,7 +427,7 @@ export function createLab(ctx) {
   // ======== FOLD PHYSICS ARRAY — instruments and math only ========
   const array = new THREE.Group();
   array.position.set(41, 0, -14);
-  const pylon = new THREE.Mesh(new THREE.BoxGeometry(0.8, 5.5, 0.8), new THREE.MeshStandardMaterial({ color: 0x3a3a4e, roughness: 0.7, metalness: 0.4 }));
+  const pylon = new THREE.Mesh(new THREE.BoxGeometry(0.8, 5.5, 0.8), new THREE.MeshStandardMaterial({ color: 0x3a3a4e, roughness: 0.7, metalness: 0.4, map: labMetalTexture() }));
   pylon.position.y = 2.75;
   array.add(pylon);
   const pylonTip = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshStandardMaterial({ color: 0xb48cff, emissive: 0x7a4adf, emissiveIntensity: 2 }));
@@ -437,7 +467,7 @@ export function createLab(ctx) {
   clinicRoof.rotation.y = Math.PI / 4;
   clinic.add(clinicRoof);
   // Lit windows facing the courtyard.
-  const clinicWinMat = new THREE.MeshStandardMaterial({ color: 0xffe8b8, emissive: 0xffc46b, emissiveIntensity: 0.9, roughness: 0.3 });
+  const clinicWinMat = new THREE.MeshStandardMaterial({ color: 0xffe8b8, emissive: 0xffc46b, emissiveIntensity: 0.9, roughness: 0.3, map: labGlassTexture() });
   [-1.4, 1.4].forEach((x) => {
     const win = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.2), clinicWinMat);
     win.position.set(x, 1.7, 2.02);
@@ -509,6 +539,60 @@ export function createLab(ctx) {
     const glow = makeGlowSprite('rgba(255,190,100,0.9)', 1.3, 0.6);
     glow.position.set(lx, 1.8, lz);
     group.add(glow);
+  });
+  // ----- Courtyard props (world-detail crew, round 10 — follow-up to
+  // round 6) -----
+  // Small clutter that makes the courtyard feel worked-in: crates and
+  // barrels tucked against the hall and workshop walls, and two potted
+  // glow-plants flanking the plaza's north rim. All hand-placed, clear
+  // of the stone path, the plaza, the test ring, and the scientists'
+  // waypoints — no labels, no clickables, no roster entries, no
+  // geometry moved, no shared-rnd calls.
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.95, map: labWoodTexture() });
+  const barrelMat = new THREE.MeshStandardMaterial({ color: 0x7a5a38, roughness: 0.95, map: labWoodTexture() });
+  const barrelBandMat = new THREE.MeshStandardMaterial({ color: 0x888899, metalness: 0.7, roughness: 0.4, map: labMetalTexture() });
+  function makeCrate(x, z, rotY, y = 0.35) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.7, 0.7), crateMat);
+    c.position.set(x, y, z);
+    c.rotation.y = rotY;
+    group.add(c);
+    return c;
+  }
+  function makeBarrel(x, z) {
+    const b = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.75, 10), barrelMat);
+    body.position.y = 0.38;
+    b.add(body);
+    const band = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.025, 6, 16), barrelBandMat);
+    band.rotation.x = Math.PI / 2;
+    band.position.y = 0.38;
+    b.add(band);
+    b.position.set(x, 0, z);
+    group.add(b);
+    return b;
+  }
+  // Two crates stacked against the research hall's west wall, barrel beside them.
+  makeCrate(27.9, -16.2, 0.15);
+  makeCrate(27.9, -16.2, 0.5, 1.05);
+  makeBarrel(27.9, -14.4);
+  // Two barrels against the prototyping workshop's east wall.
+  makeBarrel(27.7, -3.0);
+  makeBarrel(27.7, -4.6);
+  // Potted glow-plants flanking the plaza's north rim.
+  const potMat = new THREE.MeshStandardMaterial({ color: 0x9a5a3a, roughness: 0.9 });
+  const sproutMat = new THREE.MeshStandardMaterial({ color: 0x7ac08a, emissive: 0x3a8a5a, emissiveIntensity: 0.6 });
+  [[28.9, -4.0], [35.1, -4.0]].forEach(([px, pz]) => {
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.3, 0.5, 10), potMat);
+    pot.position.set(px, 0.25, pz);
+    group.add(pot);
+    for (let i = 0; i < 3; i++) {
+      const sprout = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), sproutMat);
+      sprout.position.set(px - 0.1 + i * 0.1, 0.58, pz + (i % 2 ? 0.07 : -0.07));
+      group.add(sprout);
+    }
+    const potGlow = makeGlowSprite('rgba(120,220,200,0.55)', 1.1, 0.35);
+    potGlow.position.set(px, 0.65, pz);
+    group.add(potGlow);
   });
   placeLabel('R&D Department', V(32, 0, -8), 'label-grove', 150, 6);
   // Stone path from the grove to the courtyard.

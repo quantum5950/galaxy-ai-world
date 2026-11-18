@@ -11,7 +11,8 @@
 import * as THREE from 'three';
 import {
   makeGlowSprite, makeStarfield, makeSkyDome, makeVeinGroundTexture,
-  makeStoneTexture, makeWoodTexture, makeSandTexture,
+  makeStoneTexture, makeCliffTexture, makeWoodTexture, makeSandTexture,
+  makeWaterTexture, makeCloudTexture, makeLeafTexture,
   makeGlowTree, makeRock, makeSignPost, makeClickable, mulberry32,
 } from './utils.js';
 import { createCreatures } from './creatures.js';
@@ -37,12 +38,54 @@ export function createMintaka(ctx) {
   const stoneTex = makeStoneTexture(31);
   const woodTex = makeWoodTexture(41);
   const sandTex = makeSandTexture(51);
+  // Cliff-rock textures (world-detail crew, round 9): one shared canvas
+  // for the big cliff face (tiled 3,2 so the strata read at that scale)
+  // and one for the cave-home / Batcave facades (untiled, own seed).
+  // Declared here, before any use below, so no top-level TDZ risk.
+  const cliffTex = makeCliffTexture(141);
+  cliffTex.repeat.set(3, 2);
+  const facadeTex = makeCliffTexture(151);
+  // Water/sky textures (world-detail crew, round 5): one shared ripple
+  // texture for the ocean (the stream clones it with its own repeat)
+  // and one shared cloud texture for the night-sky clouds. Declared
+  // here, before any use below, so no top-level TDZ risk.
+  const waterTex = makeWaterTexture(111);
+  waterTex.repeat.set(6, 6);
+  const cloudTex = makeCloudTexture(121);
   // Village stone — shared material for the path stones (winding path
   // and tunnel path), so the stone reads as one cut from the same rock.
   const villageStoneMat = new THREE.MeshStandardMaterial({ color: 0x7a7a8a, map: stoneTex, roughness: 1 });
 
   group.add(makeSkyDome({ top: 0x04040e, horizon: 0x141c38, glowColor: 0x2a3a6a, radius: 420 }));
   group.add(makeStarfield(1100, 380, 17));
+
+  // ----- Night clouds — slow-drifting, moonlit, faint -----
+  // Six soft cloud sprites high above the village, drifting east and
+  // wrapping around. Their own seeded random (cloudRnd) so the shared
+  // rnd() sequence — and every placement after it — stays exactly where
+  // it was; no geometry moves.
+  const cloudRnd = mulberry32(733);
+  const clouds = [];
+  for (let i = 0; i < 6; i++) {
+    const cloudMat = new THREE.SpriteMaterial({
+      map: cloudTex, color: 0xbdd0ee, transparent: true,
+      opacity: 0.14 + cloudRnd() * 0.08, depthWrite: false, fog: false,
+    });
+    const cloud = new THREE.Sprite(cloudMat);
+    const w = 50 + cloudRnd() * 45;
+    cloud.scale.set(w, w * 0.32, 1);
+    const a = cloudRnd() * Math.PI * 2;
+    const r = 150 + cloudRnd() * 110;
+    cloud.position.set(Math.cos(a) * r, 55 + cloudRnd() * 40, Math.sin(a) * r);
+    group.add(cloud);
+    clouds.push({ cloud, speed: 0.25 + cloudRnd() * 0.35 });
+  }
+  animated.push((dt, t) => {
+    for (const c of clouds) {
+      c.cloud.position.x += c.speed * dt;
+      if (c.cloud.position.x > 290) c.cloud.position.x = -290;
+    }
+  });
 
   // ----- Lights: moonlight (key), warm lamplight accents, inner glow -----
   const hemi = new THREE.HemisphereLight(0x4a5a8a, 0x14302e, 0.85);
@@ -116,7 +159,7 @@ export function createMintaka(ctx) {
   const oceanGeo = new THREE.PlaneGeometry(130, 130, 48, 48);
   const oceanMat = new THREE.MeshPhongMaterial({
     color: 0x0e2a48, specular: 0x9ab8dd, shininess: 140,
-    transparent: true, opacity: 0.94,
+    map: waterTex, transparent: true, opacity: 0.94,
   });
   const ocean = new THREE.Mesh(oceanGeo, oceanMat);
   ocean.rotation.x = -Math.PI / 2;
@@ -132,6 +175,11 @@ export function createMintaka(ctx) {
     }
     p.needsUpdate = true;
     oceanGeo.computeVertexNormals();
+  });
+  // Slow drift of the ripple texture, so the moonlight on the water moves.
+  animated.push((dt, t) => {
+    waterTex.offset.x = t * 0.004;
+    waterTex.offset.y = t * 0.0025;
   });
   // Moon glitter path on the water.
   const glitterCanvas = document.createElement('canvas');
@@ -178,7 +226,7 @@ export function createMintaka(ctx) {
     cp.setZ(i, cp.getZ(i) + (rnd() - 0.5) * 1.6);
   }
   cliffGeo.computeVertexNormals();
-  const cliff = new THREE.Mesh(cliffGeo, new THREE.MeshStandardMaterial({ color: 0x5a5266, roughness: 1, flatShading: true }));
+  const cliff = new THREE.Mesh(cliffGeo, new THREE.MeshStandardMaterial({ color: 0x5a5266, map: cliffTex, roughness: 1, flatShading: true }));
   cliff.position.set(-26, 11.5, 2);
   cliff.castShadow = true;
   cliff.receiveShadow = true;
@@ -198,7 +246,7 @@ export function createMintaka(ctx) {
   const caveHome = new THREE.Group();
   caveHome.position.set(-20.2, 6, 4);
   // Facade: warm stone front set into the cliff face.
-  const facade = new THREE.Mesh(new THREE.BoxGeometry(0.8, 5.2, 8), new THREE.MeshStandardMaterial({ color: 0x5a4a3a, roughness: 0.95 }));
+  const facade = new THREE.Mesh(new THREE.BoxGeometry(0.8, 5.2, 8), new THREE.MeshStandardMaterial({ color: 0x5a4a3a, map: facadeTex, roughness: 0.95 }));
   facade.position.set(0, 0, 0);
   caveHome.add(facade);
   // Arched doorway — dark opening with warm light spilling out.
@@ -254,7 +302,7 @@ export function createMintaka(ctx) {
   // ----- The Batcave — mansion built into the cliff side -----
   const batcave = new THREE.Group();
   batcave.position.set(-20.2, 3.5, -14);
-  const bcFacade = new THREE.Mesh(new THREE.BoxGeometry(1.0, 7, 11), new THREE.MeshStandardMaterial({ color: 0x4a4252, roughness: 0.95 }));
+  const bcFacade = new THREE.Mesh(new THREE.BoxGeometry(1.0, 7, 11), new THREE.MeshStandardMaterial({ color: 0x4a4252, map: facadeTex, roughness: 0.95 }));
   batcave.add(bcFacade);
   // Grand arched entrance.
   const bcDoor = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 3.6), new THREE.MeshBasicMaterial({ color: 0x140f08 }));
@@ -623,8 +671,13 @@ export function createMintaka(ctx) {
     new THREE.Vector3(-29, 0.12, 8),
   ]);
   const streamGeo = new THREE.TubeGeometry(streamCurve, 48, 1.15, 8, false);
+  // The stream shares the ocean's ripple canvas with its own repeat —
+  // 8 tiles along its length — so it reads as moving water, not flat paint.
+  const streamWaterTex = waterTex.clone();
+  streamWaterTex.repeat.set(8, 1);
+  streamWaterTex.needsUpdate = true;
   const stream = new THREE.Mesh(streamGeo, new THREE.MeshPhongMaterial({
-    color: 0x2a6a8a, specular: 0xbfd8ff, shininess: 120, transparent: true, opacity: 0.85,
+    color: 0x2a6a8a, specular: 0xbfd8ff, shininess: 120, map: streamWaterTex, transparent: true, opacity: 0.85,
   }));
   stream.scale.y = 0.18;
   stream.position.y = 0.02;
@@ -689,6 +742,95 @@ export function createMintaka(ctx) {
   shoreAnchor.position.set(-30, 0, -2);
   group.add(shoreAnchor);
   labels.add('The Shore', shoreAnchor, { yOffset: 2, className: 'label-place', maxDistance: 110 });
+
+  // ----- Foliage density + small props (world-detail crew, round 6) -----
+  // Extra undergrowth and village props — scenery only: no labels, no
+  // clickables, no roster entries, no geometry moved. Their own seeded
+  // random (foliageRnd) so the shared rnd() sequence — and every
+  // existing placement — stays exactly where it was.
+  const foliageRnd = mulberry32(881);
+  const bushLeafTex = makeLeafTexture(131);
+  const bushMat = new THREE.MeshStandardMaterial({ color: 0xd8e8d8, map: bushLeafTex, roughness: 1 });
+  const grassMat = new THREE.MeshStandardMaterial({ color: 0x4a7a52, roughness: 1 });
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x8a6a42, map: woodTex, roughness: 1 });
+  const barrelMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, map: woodTex, roughness: 1 });
+  // Grass tufts — three leaning blades each; they sway gently.
+  const grassGeo = new THREE.ConeGeometry(0.09, 0.7, 5);
+  const grassTufts = [];
+  function makeGrassTuft(x, z, s) {
+    const tuft = new THREE.Group();
+    for (let k = 0; k < 3; k++) {
+      const blade = new THREE.Mesh(grassGeo, grassMat);
+      blade.position.set((foliageRnd() - 0.5) * 0.25, 0.3 * s, (foliageRnd() - 0.5) * 0.25);
+      blade.rotation.z = (foliageRnd() - 0.5) * 0.5;
+      blade.rotation.x = (foliageRnd() - 0.5) * 0.4;
+      blade.scale.setScalar(s * (0.8 + foliageRnd() * 0.5));
+      tuft.add(blade);
+    }
+    tuft.position.set(x, 0, z);
+    group.add(tuft);
+    grassTufts.push(tuft);
+  }
+  // Meadow tufts — the open grass east of the village, clear of the
+  // winding path (path stays west of x = 12 here) and of the stream.
+  for (let i = 0; i < 26; i++) {
+    makeGrassTuft(18 + foliageRnd() * 18, 6 + foliageRnd() * 18, 0.8 + foliageRnd() * 0.7);
+  }
+  // Shore tufts — along the cliff base at the sand strip's land edge.
+  for (let i = 0; i < 8; i++) {
+    makeGrassTuft(-19.5 + foliageRnd() * 2, -30 + i * 8 + foliageRnd() * 3, 0.7 + foliageRnd() * 0.5);
+  }
+  // Moonpetal wildflowers scattered through the meadow — pale violet,
+  // gold, white, and rose heads that glow faintly in the dark.
+  const flowerColors = [0xc9a8ff, 0xffd76a, 0xf2ead8, 0xff9ad5];
+  const flowerStemMat = new THREE.MeshStandardMaterial({ color: 0x3a5a3a, roughness: 1 });
+  for (let i = 0; i < 20; i++) {
+    const x = 18 + foliageRnd() * 18, z = 6 + foliageRnd() * 18;
+    const s = 0.7 + foliageRnd() * 0.6;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.5 * s, 5), flowerStemMat);
+    stem.position.set(x, 0.25 * s, z);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.09 * s, 8, 6),
+      new THREE.MeshStandardMaterial({ color: flowerColors[i % flowerColors.length], emissive: flowerColors[i % flowerColors.length], emissiveIntensity: 0.5, roughness: 0.6 }));
+    head.position.set(x, 0.55 * s, z);
+    group.add(stem, head);
+  }
+  // Grove undergrowth — low leafy bushes between the glow trees, in the
+  // same leaf texture as the canopies so the grove reads as one forest.
+  const bushGeo = new THREE.IcosahedronGeometry(1, 1);
+  for (let i = 0; i < 12; i++) {
+    const a = foliageRnd() * Math.PI * 2;
+    const r = 9 + foliageRnd() * 6;
+    const bush = new THREE.Mesh(bushGeo, bushMat);
+    const s = 0.5 + foliageRnd() * 0.6;
+    bush.scale.set(s * (1 + foliageRnd() * 0.4), s * 0.55, s * (1 + foliageRnd() * 0.4));
+    bush.position.set(14 + Math.cos(a) * r, 0.25 * s, -6 + Math.sin(a) * r);
+    bush.rotation.y = foliageRnd() * Math.PI;
+    bush.castShadow = true;
+    group.add(bush);
+  }
+  // Village props — crates stacked by the terrace edge, barrels by the
+  // tunnel mouth, tucked against the structures and out of open ground.
+  const crateGeo = new THREE.BoxGeometry(0.7, 0.7, 0.7);
+  [[-14.6, 7.4, 0, 0.35], [-13.8, 7.6, 0.5, 0.35], [-14.2, 7.5, 0.9, 1.05]].forEach(([x, z, ry, y]) => {
+    const crate = new THREE.Mesh(crateGeo, crateMat);
+    crate.position.set(x, y, z);
+    crate.rotation.y = ry;
+    crate.castShadow = true;
+    group.add(crate);
+  });
+  const barrelGeo = new THREE.CylinderGeometry(0.32, 0.36, 0.8, 10);
+  [[-18.6, -6.6], [-17.9, -6.1]].forEach(([x, z]) => {
+    const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+    barrel.position.set(x, 0.4, z);
+    barrel.castShadow = true;
+    group.add(barrel);
+  });
+  // Grass sways gently in the night air.
+  animated.push((dt, t) => {
+    for (let i = 0; i < grassTufts.length; i++) {
+      grassTufts[i].rotation.z = Math.sin(t * 0.9 + i * 1.7) * 0.04;
+    }
+  });
 
   // ----- Floating mountains — the sky above the village -----
   // Pandora-style floaters, in Mintaka's night stone: inverted rock cones

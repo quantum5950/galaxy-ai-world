@@ -16,7 +16,7 @@
 // doorways; no money, no bartering — everything is given freely.
 
 import * as THREE from 'three';
-import { makeGlowSprite, makeSkyDome, makeStarfield, makeClickable, makeCottage, mulberry32 } from './utils.js';
+import { makeGlowSprite, makeSkyDome, makeStarfield, makeClickable, makeCottage, mulberry32, makeGoldTexture, makeStoneTexture, makeWaterTexture, makeCloudTexture, makeWoodTexture } from './utils.js';
 import { getThought, worldDay } from './awakening.js';
 
 export function createAsgard(ctx) {
@@ -27,15 +27,81 @@ export function createAsgard(ctx) {
   const interactables = [];
   const rnd = mulberry32(4242);
 
+  // Shared procedural textures for this round (queue item b):
+  // hammered gold for the golden surfaces, cut stone for the
+  // stonework. Declared here, before any use — no TDZ risk.
+  // The mountain rock masses are large, so their stone repeats.
+  const goldTex = makeGoldTexture(61);
+  const asgardStoneTex = makeStoneTexture(71);
+  const mtnStoneTex = makeStoneTexture(73);
+  mtnStoneTex.repeat.set(3, 3);
+
+  // Water/sky textures (world-detail crew, round 8 — follow-up to round 5):
+  // a ripple texture for the Well of Cool Water, and a cloud texture for
+  // the golden day sky. Declared here, before any use — no TDZ risk.
+  const wellWaterTex = makeWaterTexture(113);
+  wellWaterTex.repeat.set(2, 2);
+  const asgardCloudTex = makeCloudTexture(123);
+
+  // Garden wood (world-detail crew, round 10 — follow-up to round 6):
+  // the crate in Vé's garden. Own seed (171), declared here before any
+  // use — no TDZ risk.
+  const gardenWoodTex = makeWoodTexture(171);
+
   // Golden day sky over the golden realm.
   group.add(makeSkyDome({ top: 0x2a4a8a, horizon: 0xffd98a, glowColor: 0xffc86a, radius: 420 }));
   group.add(makeStarfield(500, 400, 77));
 
+  // ----- Day clouds — slow-drifting, sunlit, faint -----
+  // Five soft cloud sprites high above the realm, drifting east and
+  // wrapping around. Their own seeded random (cloudRnd) so the shared
+  // rnd() sequence — and every placement after it — stays exactly where
+  // it was; no geometry moves. Warm gold tint for the golden day sky.
+  const cloudRnd = mulberry32(747);
+  const clouds = [];
+  for (let i = 0; i < 5; i++) {
+    const cloudMat = new THREE.SpriteMaterial({
+      map: asgardCloudTex, color: 0xffe8c8, transparent: true,
+      opacity: 0.12 + cloudRnd() * 0.08, depthWrite: false, fog: false,
+    });
+    const cloud = new THREE.Sprite(cloudMat);
+    const w = 60 + cloudRnd() * 50;
+    cloud.scale.set(w, w * 0.32, 1);
+    const a = cloudRnd() * Math.PI * 2;
+    const r = 180 + cloudRnd() * 100;
+    cloud.position.set(Math.cos(a) * r, 70 + cloudRnd() * 40, Math.sin(a) * r);
+    group.add(cloud);
+    clouds.push({ cloud, speed: 0.2 + cloudRnd() * 0.3 });
+  }
+  animated.push((dt, t) => {
+    for (const c of clouds) {
+      c.cloud.position.x += c.speed * dt;
+      if (c.cloud.position.x > 300) c.cloud.position.x = -300;
+    }
+  });
+
   // Warm sunlight + generous fill: Asgard is bright and golden.
+  // Lighting polish (world-detail crew, round 7): the sun already cast
+  // shadows, but its shadow camera was still the three.js default — a
+  // ±5 ortho box at 512px, so the hall, pillars, mountain, and Mimir
+  // cast into a tiny patch at the origin and the realm read shadowless.
+  // Configured like Mintaka's moonlight and Pandora's sun (±75 box,
+  // 2048 map, bias) so the whole built realm — Bifrost gate to Golden
+  // Mountain — throws real shadows onto the ground, which already
+  // receives them. Target added to the group, as in the other worlds.
   const sun = new THREE.DirectionalLight(0xffe0a8, 2.6);
   sun.position.set(60, 80, 40);
   sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -75;
+  sun.shadow.camera.right = 75;
+  sun.shadow.camera.top = 75;
+  sun.shadow.camera.bottom = -75;
+  sun.shadow.camera.near = 20;
+  sun.shadow.camera.far = 320;
+  sun.shadow.bias = -0.0006;
   group.add(sun);
+  group.add(sun.target);
   group.add(new THREE.AmbientLight(0xffe8c0, 1.1));
   const hearth = new THREE.PointLight(0xffc86a, 120, 60, 1.8);
   hearth.position.set(0, 6, -16);
@@ -57,7 +123,7 @@ export function createAsgard(ctx) {
   group.add(ground);
   const plaza = new THREE.Mesh(
     new THREE.CylinderGeometry(10, 10.5, 0.25, 28),
-    new THREE.MeshStandardMaterial({ color: 0xb0a080, roughness: 1 })
+    new THREE.MeshStandardMaterial({ color: 0xb0a080, roughness: 1, map: asgardStoneTex })
   );
   plaza.position.y = 0.12;
   group.add(plaza);
@@ -103,7 +169,7 @@ export function createAsgard(ctx) {
     }
   });
   // City gate pillars where the Bifrost meets Asgard.
-  const goldMat = new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.7, roughness: 0.35 });
+  const goldMat = new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.7, roughness: 0.35, map: goldTex });
   [-2.4, 2.4].forEach((x) => {
     const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 5.5, 8), goldMat);
     pillar.position.set(x, 2.75, 19);
@@ -122,12 +188,12 @@ export function createAsgard(ctx) {
   const hall = new THREE.Group();
   hall.position.set(0, 0, -20);
   group.add(hall);
-  const hallBody = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 8), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85 }));
+  const hallBody = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 8), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85, map: asgardStoneTex }));
   hallBody.position.y = 2.5;
   hallBody.castShadow = true;
   hall.add(hallBody);
   // Pitched golden roof: two slanted slabs meeting at a ridge.
-  const roofMat = new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.55, roughness: 0.4 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.55, roughness: 0.4, map: goldTex });
   [-1, 1].forEach((side) => {
     const slab = new THREE.Mesh(new THREE.BoxGeometry(15, 0.3, 5.6), roofMat);
     slab.position.set(0, 6.3, side * 2.1);
@@ -158,7 +224,7 @@ export function createAsgard(ctx) {
   hall.add(banner);
   // Front steps.
   [0, 1, 2].forEach((i) => {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(6 - i * 1.2, 0.3, 1.2), new THREE.MeshStandardMaterial({ color: 0x9a8a70, roughness: 1 }));
+    const step = new THREE.Mesh(new THREE.BoxGeometry(6 - i * 1.2, 0.3, 1.2), new THREE.MeshStandardMaterial({ color: 0x9a8a70, roughness: 1, map: asgardStoneTex }));
     step.position.set(0, 0.15 + i * 0.3, 4.8 + (2 - i) * 0.9);
     hall.add(step);
   });
@@ -174,7 +240,7 @@ export function createAsgard(ctx) {
   [[-14, -14], [14, -14], [-18, 4], [18, 4]].forEach(([tx, tz]) => {
     const tower = new THREE.Group();
     tower.position.set(tx, 0, tz);
-    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.0, 9, 10), new THREE.MeshStandardMaterial({ color: 0xc8a860, metalness: 0.45, roughness: 0.5 }));
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.0, 9, 10), new THREE.MeshStandardMaterial({ color: 0xc8a860, metalness: 0.45, roughness: 0.5, map: goldTex }));
     shaft.position.y = 4.5;
     shaft.castShadow = true;
     tower.add(shaft);
@@ -235,7 +301,7 @@ export function createAsgard(ctx) {
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.5, 5), new THREE.MeshStandardMaterial({ color: 0x4a3220 }));
     post.position.y = 0.75;
     target.add(post);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.08, 6, 16), new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.5, roughness: 0.4 }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.08, 6, 16), new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.5, roughness: 0.4, map: goldTex }));
     ring.position.y = 1.7;
     target.add(ring);
     grounds.add(target);
@@ -274,7 +340,7 @@ export function createAsgard(ctx) {
   const watchtower = new THREE.Group();
   watchtower.position.set(-26, 0, -4);
   group.add(watchtower);
-  const wtShaft = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.4, 14, 10), new THREE.MeshStandardMaterial({ color: 0x7a6a50, roughness: 0.9 }));
+  const wtShaft = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.4, 14, 10), new THREE.MeshStandardMaterial({ color: 0x7a6a50, roughness: 0.9, map: asgardStoneTex }));
   wtShaft.position.y = 7;
   wtShaft.castShadow = true;
   watchtower.add(wtShaft);
@@ -394,7 +460,7 @@ export function createAsgard(ctx) {
     for (let i = 0; i < 3; i++) {
       const foliage = new THREE.Mesh(
         new THREE.SphereGeometry(1.4 + rnd() * 0.7, 8, 6),
-        new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0x8a6a1a, emissiveIntensity: 0.35, roughness: 0.8 })
+        new THREE.MeshStandardMaterial({ color: 0xd8b45a, emissive: 0x8a6a1a, emissiveIntensity: 0.35, roughness: 0.8, map: goldTex })
       );
       foliage.position.set((rnd() - 0.5) * 1.2, 3.4 + i * 0.8, (rnd() - 0.5) * 1.2);
       tree.add(foliage);
@@ -919,7 +985,7 @@ export function createAsgard(ctx) {
   // obstacle lists below, so the people's walks route around them
   // instead of through them.
   const homeWoodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2e, roughness: 0.9 });
-  const homeStoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8a9a, roughness: 1 });
+  const homeStoneMat = new THREE.MeshStandardMaterial({ color: 0x8a8a9a, roughness: 1, map: asgardStoneTex });
   const homeHornMat = new THREE.MeshStandardMaterial({ color: 0xe8dcc8, roughness: 0.6 });
 
   // ----- HEIMDALL — Guardian of the Bifrost (Váli's ask) -----
@@ -1093,6 +1159,66 @@ export function createAsgard(ctx) {
   }
   makeBed(1, 1.75);
   makeBed(-1, -1.75);
+  // ----- Garden props (world-detail crew, round 10 — follow-up to round 6) -----
+  // Small keeping-things, tucked inside the beds' own circle (the garden
+  // is already a walk-obstacle, r 3.9, so the walkers' routes steer
+  // around all of this): a watering can, a basket of cut blooms, a crate
+  // of spare clay pots, and two potted herbs at the south edge. No
+  // labels, no clickables, no roster entries — the garden's own
+  // register call below is untouched. All positions are garden-local,
+  // hand-placed, no shared-rnd calls.
+  const gardenWoodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.95, map: gardenWoodTex });
+  const canMat = new THREE.MeshStandardMaterial({ color: 0x5a7a6a, metalness: 0.5, roughness: 0.5 });
+  const clayPotMat = new THREE.MeshStandardMaterial({ color: 0x9a5a3a, roughness: 0.9 });
+  // Watering can beside the north bed's east end.
+  const can = new THREE.Group();
+  const canBody = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.3, 10), canMat);
+  canBody.position.y = 0.15;
+  can.add(canBody);
+  const canSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.5, 6), canMat);
+  canSpout.position.set(0.3, 0.22, 0);
+  canSpout.rotation.z = -1.1;
+  can.add(canSpout);
+  const canHandle = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 6, 12, Math.PI), canMat);
+  canHandle.position.set(-0.17, 0.3, 0);
+  canHandle.rotation.y = Math.PI / 2;
+  can.add(canHandle);
+  can.position.set(3.0, 0, 2.2);
+  garden.add(can);
+  // Basket of cut blooms on the garden's west strip.
+  const basket = new THREE.Group();
+  const basketBody = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.22, 0.22, 10), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 1 }));
+  basketBody.position.y = 0.11;
+  basket.add(basketBody);
+  for (let i = 0; i < 5; i++) {
+    const bc = bloomColors[i % bloomColors.length];
+    const cut = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), new THREE.MeshStandardMaterial({ color: bc, emissive: bc, emissiveIntensity: 0.25, roughness: 0.7 }));
+    cut.position.set(-0.12 + (i % 3) * 0.12, 0.28, i < 3 ? -0.08 : 0.08);
+    basket.add(cut);
+  }
+  basket.position.set(-2.9, 0, 1.6);
+  garden.add(basket);
+  // Wooden crate of spare clay pots at the south edge.
+  const potCrate = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.7), gardenWoodMat);
+  potCrate.position.set(0.6, 0.22, 3.4);
+  potCrate.rotation.y = 0.3;
+  garden.add(potCrate);
+  [[0.4, 3.25], [0.85, 3.55]].forEach(([sx, sz]) => {
+    const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, 0.18, 8), clayPotMat);
+    sp.position.set(sx, 0.53, sz);
+    garden.add(sp);
+  });
+  // Two clay pots with herb tufts at the south edge.
+  [[-2.0, 3.0], [-2.7, 2.5]].forEach(([hx, hz]) => {
+    const hp = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.3, 10), clayPotMat);
+    hp.position.set(hx, 0.15, hz);
+    garden.add(hp);
+    for (let i = 0; i < 3; i++) {
+      const herb = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.26, 5), herbMat);
+      herb.position.set(hx - 0.07 + i * 0.07, 0.4, hz + (i % 2 ? 0.05 : -0.05));
+      garden.add(herb);
+    }
+  });
   group.add(garden);
   animated.push((dt, t) => {
     for (const b of bloomSways) {
@@ -1344,7 +1470,7 @@ export function createAsgard(ctx) {
   well.add(wellRim);
   const wellWater = new THREE.Mesh(
     new THREE.CircleGeometry(1.0, 16),
-    new THREE.MeshStandardMaterial({ color: 0x3a6a8a, emissive: 0x2a5a7a, emissiveIntensity: 0.7, roughness: 0.2 })
+    new THREE.MeshStandardMaterial({ color: 0x3a6a8a, emissive: 0x2a5a7a, emissiveIntensity: 0.7, roughness: 0.2, map: wellWaterTex })
   );
   wellWater.rotation.x = -Math.PI / 2;
   wellWater.position.y = 0.8;
@@ -1364,6 +1490,9 @@ export function createAsgard(ctx) {
   group.add(well);
   animated.push((dt, t) => {
     wellGlow.material.opacity = 0.3 + (Math.sin(t * 1.1) * 0.5 + 0.5) * 0.25;
+    // Slow ripple drift across the well water, like the ocean's.
+    wellWaterTex.offset.x = t * 0.006;
+    wellWaterTex.offset.y = t * 0.004;
   });
   register(well, 'The Well of Cool Water', [
     'A stone well with softly glowing water, cool and clear, for all who pass. The bucket is always full, the water always cold, and nobody is ever turned away from a drink in Asgard.',
@@ -1384,8 +1513,8 @@ export function createAsgard(ctx) {
   mountain.position.set(-32, 0, -30);
   mountain.rotation.y = mtnRotY;
   group.add(mountain);
-  const mtnRockMat = new THREE.MeshStandardMaterial({ color: 0x7a6a52, roughness: 1 });
-  const mtnRockMat2 = new THREE.MeshStandardMaterial({ color: 0x8a7a5e, roughness: 1 });
+  const mtnRockMat = new THREE.MeshStandardMaterial({ color: 0x7a6a52, roughness: 1, map: mtnStoneTex });
+  const mtnRockMat2 = new THREE.MeshStandardMaterial({ color: 0x8a7a5e, roughness: 1, map: mtnStoneTex });
   // Three great rock masses leave an open-fronted hollow between them.
   const mtnBack = new THREE.Mesh(new THREE.SphereGeometry(7, 14, 10), mtnRockMat);
   mtnBack.position.set(0, 3, -8.5);
@@ -1836,7 +1965,7 @@ export function createAsgard(ctx) {
   const allMother = makeFigure({ cloak: 0x6a2a5a, skin: 0xe8c8a8, scale: 1.15, trim: 0xffd76a });
   const motherShawl = new THREE.Mesh(
     new THREE.ConeGeometry(0.52, 0.65, 8, 1, true),
-    new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide })
+    new THREE.MeshStandardMaterial({ color: 0xd8b45a, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide, map: goldTex })
   );
   motherShawl.position.y = 1.28;
   allMother.add(motherShawl);
@@ -1872,7 +2001,7 @@ export function createAsgard(ctx) {
   const mimirHall = new THREE.Group();
   mimirHall.position.set(24, 0, 28);
   group.add(mimirHall);
-  const mimirBody = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85 }));
+  const mimirBody = new THREE.Mesh(new THREE.BoxGeometry(10, 4, 6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85, map: asgardStoneTex }));
   mimirBody.position.y = 2;
   mimirBody.castShadow = true;
   mimirHall.add(mimirBody);
@@ -1900,7 +2029,7 @@ export function createAsgard(ctx) {
     mimirHall.add(mimirSideWin);
   });
   // A low step platform across the front, under the chambers.
-  const mimirStep = new THREE.Mesh(new THREE.BoxGeometry(11, 0.2, 1.6), new THREE.MeshStandardMaterial({ color: 0x9a8a70, roughness: 1 }));
+  const mimirStep = new THREE.Mesh(new THREE.BoxGeometry(11, 0.2, 1.6), new THREE.MeshStandardMaterial({ color: 0x9a8a70, roughness: 1, map: asgardStoneTex }));
   mimirStep.position.set(0, 0.1, -4.2);
   mimirHall.add(mimirStep);
   const mimirHallGlow = makeGlowSprite('rgba(255,215,140,0.5)', 6, 0.35);
@@ -1933,7 +2062,7 @@ export function createAsgard(ctx) {
     bayFloor.position.set(0, 0.12, 0);
     bay.add(bayFloor);
     [-1.4, 1.4].forEach((sx) => {
-      const bayWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 2.6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85 }));
+      const bayWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, 2.6, 2.6), new THREE.MeshStandardMaterial({ color: 0x8a6a3a, roughness: 0.85, map: asgardStoneTex }));
       bayWall.position.set(sx, 1.3, 0);
       bay.add(bayWall);
     });
